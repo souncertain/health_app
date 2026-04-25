@@ -49,6 +49,40 @@ void main() {
     expect(find.text('Your Numbers'), findsOneWidget);
     expect(find.text('Blood Sugar'), findsOneWidget);
 
+    await tester.longPress(find.text('Blood Sugar').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit Metric'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('Delete'));
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Delete metric?'), findsOneWidget);
+    expect(
+      find.text(
+        'This will remove the metric and all of its saved values from local storage.',
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byType(TextFormField).at(0),
+      'Blood Sugar Plus',
+    );
+    await tester.enterText(find.byType(TextFormField).at(1), 'mmol/L');
+    await tester.enterText(find.byType(TextFormField).at(2), '75');
+    await tester.enterText(find.byType(TextFormField).at(3), '110');
+    await tester.ensureVisible(find.text('Update Metric'));
+    await tester.tap(find.text('Update Metric'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Blood Sugar Plus'), findsOneWidget);
+
     await tester.tap(find.text('Dashboard').first);
     await tester.pumpAndSettle();
 
@@ -56,6 +90,16 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Log Metric').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose Metric'), findsOneWidget);
+
+    await tester.tap(find.text('Blood Sugar Plus').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Log Blood Sugar Plus'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
 
     expect(find.text('Your Numbers'), findsOneWidget);
