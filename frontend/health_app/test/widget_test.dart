@@ -23,7 +23,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Medications'), findsOneWidget);
-    expect(find.text("Today's Progress"), findsOneWidget);
+    expect(find.textContaining('Progress for '), findsOneWidget);
 
     await tester.tap(find.text('Dashboard').first);
     await tester.pumpAndSettle();
@@ -34,6 +34,11 @@ void main() {
     expect(find.text('Add Medication'), findsWidgets);
 
     await tester.tap(find.text('Add Medication').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('New Medication'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
 
     expect(find.text('Medications'), findsOneWidget);

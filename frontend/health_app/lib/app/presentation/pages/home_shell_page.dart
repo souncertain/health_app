@@ -17,6 +17,7 @@ class HomeShellPage extends StatefulWidget {
 
 class _HomeShellPageState extends State<HomeShellPage> {
   final _dashboardPageKey = GlobalKey<DashboardPageState>();
+  final _medsPageKey = GlobalKey<MedsPageState>();
   AppTab _selectedTab = AppTab.dashboard;
   bool _isFabExpanded = false;
 
@@ -42,6 +43,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
         });
       case 'add_medication':
         _selectTab(AppTab.meds);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _medsPageKey.currentState?.openCreateMedicationSheet();
+        });
       case 'log_metric':
         _selectTab(AppTab.metrics);
       case 'book_appointment':
@@ -62,7 +66,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
             index: _selectedTab.index,
             children: [
               DashboardPage(key: _dashboardPageKey),
-              const MedsPage(),
+              MedsPage(key: _medsPageKey),
               const MetricsPage(),
               const VisitsPage(),
               const _FeaturePlaceholderPage(
