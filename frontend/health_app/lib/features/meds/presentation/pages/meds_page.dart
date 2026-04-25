@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/app_layout_constants.dart';
 import '../../domain/entities/medication_item.dart';
 import '../../domain/entities/upcoming_reminder.dart';
 
@@ -201,7 +202,7 @@ class _MedsPageState extends State<MedsPage> {
                       horizontalPadding,
                       10,
                       horizontalPadding,
-                      148,
+                      kPageBottomOverlayPadding,
                     ),
                     child: SizedBox(
                       width: double.infinity,

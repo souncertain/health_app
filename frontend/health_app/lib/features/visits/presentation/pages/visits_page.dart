@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/app_layout_constants.dart';
 import '../../domain/entities/medical_visit.dart';
 
 enum VisitFilter { oneTime, recurring }
@@ -100,7 +101,7 @@ class _VisitsPageState extends State<VisitsPage> {
                       horizontalPadding,
                       18,
                       horizontalPadding,
-                      148,
+                      kPageBottomOverlayPadding,
                     ),
                     child: SizedBox(
                       width: double.infinity,

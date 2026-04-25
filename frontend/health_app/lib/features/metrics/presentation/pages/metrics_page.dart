@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/layout/app_layout_constants.dart';
 import '../../domain/entities/health_metric_item.dart';
 
 class MetricsPage extends StatelessWidget {
@@ -111,7 +112,7 @@ class MetricsPage extends StatelessWidget {
                       horizontalPadding,
                       8,
                       horizontalPadding,
-                      148,
+                      kPageBottomOverlayPadding,
                     ),
                     child: SizedBox(
                       width: double.infinity,
