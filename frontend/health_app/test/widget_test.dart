@@ -135,6 +135,11 @@ void main() {
     await tester.tap(find.text('Book Appointment').first);
     await tester.pumpAndSettle();
 
+    expect(find.text('New Appointment'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    await tester.pumpAndSettle();
+
     expect(find.text('Medical Visits'), findsOneWidget);
   });
 }

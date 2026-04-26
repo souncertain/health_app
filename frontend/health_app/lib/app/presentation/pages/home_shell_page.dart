@@ -19,6 +19,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
   final _dashboardPageKey = GlobalKey<DashboardPageState>();
   final _medsPageKey = GlobalKey<MedsPageState>();
   final _metricsPageKey = GlobalKey<MetricsPageState>();
+  final _visitsPageKey = GlobalKey<VisitsPageState>();
   AppTab _selectedTab = AppTab.dashboard;
   bool _isFabExpanded = false;
 
@@ -57,6 +58,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
         return;
       case 'book_appointment':
         _selectTab(AppTab.visits);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _visitsPageKey.currentState?.openCreateAppointmentSheet();
+        });
         return;
       default:
         setState(() {
@@ -77,7 +81,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
               DashboardPage(key: _dashboardPageKey),
               MedsPage(key: _medsPageKey),
               MetricsPage(key: _metricsPageKey),
-              const VisitsPage(),
+              VisitsPage(key: _visitsPageKey),
               const _FeaturePlaceholderPage(
                 title: 'Profile',
                 subtitle: 'Profile screen will be connected next.',
