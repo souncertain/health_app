@@ -196,7 +196,7 @@ class DashboardPageState extends State<DashboardPage> {
                             compact: isCompact,
                           ),
                         ),
-                        Padding(
+                     /*   Padding(  // Commented for an only frontend practice, will be added with backend
                           padding: EdgeInsets.fromLTRB(
                             horizontalPadding,
                             22,
@@ -205,6 +205,7 @@ class DashboardPageState extends State<DashboardPage> {
                           ),
                           child: _DashboardFitnessSyncCard(compact: isCompact),
                         ),
+                        */
                         Padding(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPadding,

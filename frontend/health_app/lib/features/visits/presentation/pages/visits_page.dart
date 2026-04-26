@@ -222,7 +222,7 @@ class VisitsPageState extends State<VisitsPage> {
                                         .toList(),
                                   ),
                           ),
-                          Padding(
+                          /*Padding( // Commented for an only frontend practice, will be added with backend
                             padding: EdgeInsets.fromLTRB(
                               horizontalPadding,
                               visits.isEmpty ? 0 : 4,
@@ -231,6 +231,7 @@ class VisitsPageState extends State<VisitsPage> {
                             ),
                             child: const _PrescriptionScannerCard(),
                           ),
+                          */
                           Padding(
                             padding: EdgeInsets.fromLTRB(
                               horizontalPadding,
