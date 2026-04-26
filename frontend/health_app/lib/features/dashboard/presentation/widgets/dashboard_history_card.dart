@@ -63,7 +63,7 @@ class _DashboardHistoryCardState extends State<DashboardHistoryCard> {
           Row(
             children: [
               Text(
-                'BP History',
+                'История давления',
                 style: TextStyle(
                   color: const Color(0xFF0B1E4B),
                   fontSize: widget.compact ? 20 : 22,
@@ -99,12 +99,9 @@ class _DashboardHistoryCardState extends State<DashboardHistoryCard> {
           const SizedBox(height: 18),
           const Row(
             children: [
-              _DashboardLegendItem(label: 'Systolic', color: Color(0xFFE53935)),
+              _DashboardLegendItem(label: 'Верхнее', color: Color(0xFFE53935)),
               SizedBox(width: 18),
-              _DashboardLegendItem(
-                label: 'Diastolic',
-                color: Color(0xFF3165E6),
-              ),
+              _DashboardLegendItem(label: 'Нижнее', color: Color(0xFF3165E6)),
             ],
           ),
           SizedBox(height: widget.compact ? 10 : 12),
@@ -113,7 +110,7 @@ class _DashboardHistoryCardState extends State<DashboardHistoryCard> {
               height: 180,
               child: Center(
                 child: Text(
-                  'No readings yet',
+                  'Измерений пока нет',
                   style: TextStyle(
                     color: Color(0xFF90A4C4),
                     fontSize: 16,
@@ -391,7 +388,7 @@ class _ChartTooltip extends StatelessWidget {
               ),
               const SizedBox(height: 10),
               Text(
-                'Sys: ${reading.systolic}',
+                'Верх: ${reading.systolic}',
                 style: const TextStyle(
                   color: Color(0xFFE53935),
                   fontSize: 15,
@@ -400,7 +397,7 @@ class _ChartTooltip extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Dia: ${reading.diastolic}',
+                'Низ: ${reading.diastolic}',
                 style: const TextStyle(
                   color: Color(0xFF3165E6),
                   fontSize: 15,

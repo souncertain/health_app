@@ -204,7 +204,7 @@ class MedsPageState extends State<MedsPage> {
                                   Expanded(
                                     child: _MedicationSummaryCard(
                                       value: '${summary.taken}',
-                                      label: 'Taken',
+                                      label: 'Принято',
                                       background: const Color(0xFFDDF8E5),
                                       valueColor: const Color(0xFF11A648),
                                       labelColor: const Color(0xFF11A648),
@@ -214,7 +214,7 @@ class MedsPageState extends State<MedsPage> {
                                   Expanded(
                                     child: _MedicationSummaryCard(
                                       value: '${summary.pending}',
-                                      label: 'Remaining',
+                                      label: 'Осталось',
                                       background: const Color(0xFFFFF2B8),
                                       valueColor: const Color(0xFFF59E0B),
                                       labelColor: const Color(0xFFF59E0B),
@@ -224,7 +224,7 @@ class MedsPageState extends State<MedsPage> {
                                   Expanded(
                                     child: _MedicationSummaryCard(
                                       value: '${summary.missed}',
-                                      label: 'Missed',
+                                      label: 'Пропущено',
                                       background: const Color(0xFFFFDCDD),
                                       valueColor: const Color(0xFFEF4444),
                                       labelColor: const Color(0xFFEF4444),
@@ -241,7 +241,7 @@ class MedsPageState extends State<MedsPage> {
                                 12,
                               ),
                               child: Text(
-                                'Upcoming Notifications',
+                                'Ближайшие уведомления',
                                 style: TextStyle(
                                   fontSize: isCompact ? 20 : 22,
                                   fontWeight: FontWeight.w800,
@@ -303,7 +303,7 @@ class MedsPageState extends State<MedsPage> {
                                     size: isCompact ? 26 : 30,
                                   ),
                                   label: Text(
-                                    'Add Medication',
+                                    'Добавить препарат',
                                     style: TextStyle(
                                       fontSize: isCompact ? 16 : 18,
                                       fontWeight: FontWeight.w700,
@@ -382,7 +382,7 @@ class _MedsHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Medications',
+                        'Препараты',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isCompact ? 28 : 32,
@@ -421,7 +421,7 @@ class _MedsHeader extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          'Progress for ${selectedDay.monthDayLabel}',
+                          'Прогресс за ${selectedDay.monthDayLabel}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -433,8 +433,8 @@ class _MedsHeader extends StatelessWidget {
                       ),
                       Text(
                         totalCount == 0
-                            ? '0/0 taken'
-                            : '$takenCount/$totalCount taken',
+                            ? '0/0 принято'
+                            : '$takenCount/$totalCount принято',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.82),
                           fontSize: 16,
@@ -623,7 +623,7 @@ class _MedicationCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Text(
-                              'MISSED',
+                              'ПРОПУЩЕН',
                               style: TextStyle(
                                 color: Color(0xFFEF4444),
                                 fontSize: 12,
@@ -960,7 +960,7 @@ class _EmptyMedicationState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'No medications added yet',
+            'Препараты еще не добавлены',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF0C1C46),
@@ -970,7 +970,7 @@ class _EmptyMedicationState extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Create your first medication schedule to track intake and notifications.',
+            'Создайте первое расписание приема, чтобы отслеживать прием и уведомления.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF6F86A9),
@@ -994,7 +994,7 @@ class _EmptyMedicationState extends StatelessWidget {
               ),
               icon: const Icon(Icons.add_rounded),
               label: const Text(
-                'Add Medication',
+                'Добавить препарат',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
               ),
             ),
@@ -1025,7 +1025,7 @@ class _NoMedsForDayState extends StatelessWidget {
         ],
       ),
       child: const Text(
-        'No medications are scheduled for this day.',
+        'На этот день прием препаратов не запланирован.',
         style: TextStyle(
           color: Color(0xFF6F86A9),
           fontSize: 15,
@@ -1056,7 +1056,7 @@ class _NoUpcomingRemindersState extends StatelessWidget {
         ],
       ),
       child: const Text(
-        'No upcoming notifications for the selected day.',
+        'На выбранный день нет предстоящих уведомлений.',
         style: TextStyle(
           color: Color(0xFF90A4C4),
           fontSize: 15,
@@ -1100,7 +1100,7 @@ List<_MedsDayData> _buildCurrentWeekDays(DateTime today) {
       shortLabel: _weekdayShortLabel(date.weekday),
       fullLabel: _weekdayFullLabel(date.weekday),
       dayNumber: date.day,
-      monthDayLabel: '${_monthLabel(date.month)} ${date.day}',
+      monthDayLabel: '${date.day} ${_monthLabel(date.month)}',
     );
   });
 }
@@ -1108,19 +1108,19 @@ List<_MedsDayData> _buildCurrentWeekDays(DateTime today) {
 String _weekdayShortLabel(int weekday) {
   switch (weekday) {
     case DateTime.monday:
-      return 'M';
+      return 'ПН';
     case DateTime.tuesday:
-      return 'T';
+      return 'ВТ';
     case DateTime.wednesday:
-      return 'W';
+      return 'СР';
     case DateTime.thursday:
-      return 'T';
+      return 'ЧТ';
     case DateTime.friday:
-      return 'F';
+      return 'ПТ';
     case DateTime.saturday:
-      return 'S';
+      return 'СБ';
     case DateTime.sunday:
-      return 'S';
+      return 'ВС';
   }
   return '';
 }
@@ -1128,19 +1128,19 @@ String _weekdayShortLabel(int weekday) {
 String _weekdayFullLabel(int weekday) {
   switch (weekday) {
     case DateTime.monday:
-      return 'Monday';
+      return 'Понедельник';
     case DateTime.tuesday:
-      return 'Tuesday';
+      return 'Вторник';
     case DateTime.wednesday:
-      return 'Wednesday';
+      return 'Среда';
     case DateTime.thursday:
-      return 'Thursday';
+      return 'Четверг';
     case DateTime.friday:
-      return 'Friday';
+      return 'Пятница';
     case DateTime.saturday:
-      return 'Saturday';
+      return 'Суббота';
     case DateTime.sunday:
-      return 'Sunday';
+      return 'Воскресенье';
   }
   return '';
 }
@@ -1148,29 +1148,29 @@ String _weekdayFullLabel(int weekday) {
 String _monthLabel(int month) {
   switch (month) {
     case 1:
-      return 'January';
+      return 'янв.';
     case 2:
-      return 'February';
+      return 'февр.';
     case 3:
-      return 'March';
+      return 'мар.';
     case 4:
-      return 'April';
+      return 'апр.';
     case 5:
-      return 'May';
+      return 'мая';
     case 6:
-      return 'June';
+      return 'июн.';
     case 7:
-      return 'July';
+      return 'июл.';
     case 8:
-      return 'August';
+      return 'авг.';
     case 9:
-      return 'September';
+      return 'сент.';
     case 10:
-      return 'October';
+      return 'окт.';
     case 11:
-      return 'November';
+      return 'нояб.';
     case 12:
-      return 'December';
+      return 'дек.';
   }
   return '';
 }

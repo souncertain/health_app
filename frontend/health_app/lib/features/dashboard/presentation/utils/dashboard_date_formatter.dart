@@ -1,35 +1,30 @@
 const _monthShortNames = <int, String>{
-  1: 'Jan',
-  2: 'Feb',
-  3: 'Mar',
-  4: 'Apr',
-  5: 'May',
-  6: 'Jun',
-  7: 'Jul',
-  8: 'Aug',
-  9: 'Sep',
-  10: 'Oct',
-  11: 'Nov',
-  12: 'Dec',
+  1: 'янв.',
+  2: 'февр.',
+  3: 'мар.',
+  4: 'апр.',
+  5: 'мая',
+  6: 'июн.',
+  7: 'июл.',
+  8: 'авг.',
+  9: 'сент.',
+  10: 'окт.',
+  11: 'нояб.',
+  12: 'дек.',
 };
 
 String formatMonthDay(DateTime value) {
-  return '${_monthShortNames[value.month]} ${value.day}';
+  return '${value.day} ${_monthShortNames[value.month]}';
 }
 
 String formatMonthDayYear(DateTime value) {
-  return '${_monthShortNames[value.month]} ${value.day}, ${value.year}';
+  return '${value.day} ${_monthShortNames[value.month]} ${value.year}';
 }
 
 String formatTimeOfDay(DateTime value) {
-  final hour = value.hour == 0
-      ? 12
-      : value.hour > 12
-      ? value.hour - 12
-      : value.hour;
-  final suffix = value.hour >= 12 ? 'PM' : 'AM';
+  final hour = value.hour.toString().padLeft(2, '0');
   final minute = value.minute.toString().padLeft(2, '0');
-  return '$hour:$minute $suffix';
+  return '$hour:$minute';
 }
 
 String formatMonthDayTime(DateTime value) {

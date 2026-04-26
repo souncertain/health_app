@@ -19,7 +19,7 @@ class AllReadingsPage extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         title: const Text(
-          'All Measurements',
+          'Все измерения',
           style: TextStyle(
             color: Color(0xFF0C1C46),
             fontWeight: FontWeight.w800,
@@ -36,7 +36,7 @@ class AllReadingsPage extends StatelessWidget {
           if (controller.allReadings.isEmpty) {
             return const Center(
               child: Text(
-                'No readings yet',
+                'Измерений пока нет',
                 style: TextStyle(
                   color: Color(0xFF90A4C4),
                   fontSize: 16,

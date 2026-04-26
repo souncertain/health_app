@@ -6,15 +6,15 @@ extension AppTabPresentation on AppTab {
   String get label {
     switch (this) {
       case AppTab.dashboard:
-        return 'Dashboard';
+        return 'Главная';
       case AppTab.meds:
-        return 'Meds';
+        return 'Препараты';
       case AppTab.metrics:
-        return 'Metrics';
+        return 'Метрики';
       case AppTab.visits:
-        return 'Visits';
+        return 'Визиты';
       case AppTab.profile:
-        return 'Profile';
+        return 'Профиль';
     }
   }
 

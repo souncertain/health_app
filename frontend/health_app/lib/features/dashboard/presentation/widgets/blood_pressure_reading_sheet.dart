@@ -112,7 +112,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save the reading.')),
+          const SnackBar(content: Text('Не удалось сохранить измерение.')),
         );
       }
     } finally {
@@ -133,21 +133,21 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete reading?'),
+          title: const Text('Удалить запись?'),
           content: const Text(
-            'This measurement will be removed from local storage.',
+            'Это измерение будет удалено из локального хранилища.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Отмена'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
               ),
-              child: const Text('Delete'),
+              child: const Text('Удалить'),
             ),
           ],
         );
@@ -170,7 +170,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not delete the reading.')),
+          const SnackBar(content: Text('Не удалось удалить измерение.')),
         );
       }
     } finally {
@@ -203,7 +203,9 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        _isEditing ? 'Edit Measurement' : 'Add Measurement',
+                        _isEditing
+                            ? 'Редактировать измерение'
+                            : 'Добавить измерение',
                         style: const TextStyle(
                           color: Color(0xFF12203F),
                           fontSize: 24,
@@ -227,20 +229,20 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
                 ),
                 const SizedBox(height: 28),
                 _ReadingField(
-                  label: 'Systolic (mmHg)',
-                  hintText: 'e.g. 120',
+                  label: 'Систолическое (мм рт. ст.)',
+                  hintText: 'напр. 120',
                   controller: _systolicController,
                 ),
                 const SizedBox(height: 20),
                 _ReadingField(
-                  label: 'Diastolic (mmHg)',
-                  hintText: 'e.g. 80',
+                  label: 'Диастолическое (мм рт. ст.)',
+                  hintText: 'напр. 80',
                   controller: _diastolicController,
                 ),
                 const SizedBox(height: 20),
                 _ReadingField(
-                  label: 'Pulse (bpm)',
-                  hintText: 'e.g. 72',
+                  label: 'Пульс (уд/мин)',
+                  hintText: 'напр. 72',
                   controller: _pulseController,
                 ),
                 const SizedBox(height: 28),
@@ -259,7 +261,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
                             padding: const EdgeInsets.symmetric(vertical: 18),
                           ),
                           child: const Text(
-                            'Delete',
+                            'Удалить',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
@@ -272,7 +274,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
                         flex: 2,
                         child: _SaveReadingButton(
                           busy: _isSubmitting,
-                          label: 'Update Reading',
+                          label: 'Обновить запись',
                           onPressed: _submit,
                         ),
                       ),
@@ -281,7 +283,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
                 ] else
                   _SaveReadingButton(
                     busy: _isSubmitting,
-                    label: 'Save Reading',
+                    label: 'Сохранить запись',
                     onPressed: _submit,
                   ),
               ],
@@ -359,15 +361,15 @@ class _ReadingField extends StatelessWidget {
           validator: (value) {
             final trimmed = value?.trim() ?? '';
             if (trimmed.isEmpty) {
-              return 'Required';
+              return 'Обязательное поле';
             }
 
             final parsed = int.tryParse(trimmed);
             if (parsed == null) {
-              return 'Enter a number';
+              return 'Введите число';
             }
             if (parsed <= 0) {
-              return 'Must be greater than zero';
+              return 'Значение должно быть больше нуля';
             }
             return null;
           },

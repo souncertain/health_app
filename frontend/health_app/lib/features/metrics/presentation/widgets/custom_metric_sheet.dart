@@ -117,7 +117,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
     if (minValue >= maxValue) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Target max must be greater than target min.'),
+          content: Text('Верхняя граница должна быть больше нижней.'),
         ),
       );
       return;
@@ -145,8 +145,8 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
           SnackBar(
             content: Text(
               _isEditing
-                  ? 'Could not update the metric.'
-                  : 'Could not create the metric.',
+                  ? 'Не удалось обновить метрику.'
+                  : 'Не удалось создать метрику.',
             ),
           ),
         );
@@ -174,14 +174,14 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
             borderRadius: BorderRadius.circular(24),
           ),
           title: const Text(
-            'Delete metric?',
+            'Удалить метрику?',
             style: TextStyle(
               color: Color(0xFF12203F),
               fontWeight: FontWeight.w800,
             ),
           ),
           content: const Text(
-            'This will remove the metric and all of its saved values from local storage.',
+            'Метрика и все сохраненные значения будут удалены из локального хранилища.',
             style: TextStyle(
               color: Color(0xFF61738F),
               fontSize: 15,
@@ -192,7 +192,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
               child: const Text(
-                'Cancel',
+                'Отмена',
                 style: TextStyle(
                   color: Color(0xFF7184A2),
                   fontWeight: FontWeight.w700,
@@ -206,7 +206,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
                 foregroundColor: Colors.white,
               ),
               child: const Text(
-                'Delete',
+                'Удалить',
                 style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
@@ -231,7 +231,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not delete the metric.')),
+          const SnackBar(content: Text('Не удалось удалить метрику.')),
         );
       }
     } finally {
@@ -265,7 +265,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      _isEditing ? 'Edit Metric' : 'Custom Metric',
+                      _isEditing ? 'Редактировать метрику' : 'Своя метрика',
                       style: const TextStyle(
                         color: Color(0xFF12203F),
                         fontSize: 24,
@@ -289,22 +289,22 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
               ),
               const SizedBox(height: 28),
               _MetricField(
-                label: 'Metric Name',
-                hintText: 'e.g. Uric Acid',
+                label: 'Название метрики',
+                hintText: 'напр. Мочевая кислота',
                 controller: _nameController,
                 keyboardType: TextInputType.name,
               ),
               const SizedBox(height: 20),
               _MetricField(
-                label: 'Unit',
-                hintText: 'e.g. mg/dL',
+                label: 'Единица измерения',
+                hintText: 'напр. мг/дл',
                 controller: _unitController,
                 keyboardType: TextInputType.text,
               ),
               const SizedBox(height: 20),
               _MetricField(
-                label: 'Target Min',
-                hintText: 'e.g. 3.5',
+                label: 'Нижняя граница',
+                hintText: 'напр. 3.5',
                 controller: _targetMinController,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -313,8 +313,8 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
               ),
               const SizedBox(height: 20),
               _MetricField(
-                label: 'Target Max',
-                hintText: 'e.g. 7.2',
+                label: 'Верхняя граница',
+                hintText: 'напр. 7.2',
                 controller: _targetMaxController,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
@@ -353,7 +353,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
                                 ),
                               )
                             : const Text(
-                                'Delete',
+                                'Удалить',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w700,
@@ -377,12 +377,12 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
   String? _decimalValidator(String? value) {
     final trimmed = value?.trim() ?? '';
     if (trimmed.isEmpty) {
-      return 'Required';
+      return 'Обязательное поле';
     }
 
     final parsed = double.tryParse(trimmed.replaceAll(',', '.'));
     if (parsed == null) {
-      return 'Enter a number';
+      return 'Введите число';
     }
 
     return null;
@@ -410,7 +410,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
               ),
             )
           : Text(
-              _isEditing ? 'Update Metric' : 'Create Metric',
+              _isEditing ? 'Обновить метрику' : 'Создать метрику',
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
     );
@@ -492,7 +492,7 @@ class _MetricField extends StatelessWidget {
               validator ??
               (value) {
                 if ((value?.trim() ?? '').isEmpty) {
-                  return 'Required';
+                  return 'Обязательное поле';
                 }
                 return null;
               },

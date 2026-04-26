@@ -141,9 +141,9 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       return;
     }
     if (_selectedTimeInMinutes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose a time for the appointment.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Выберите время приема.')));
       return;
     }
 
@@ -171,8 +171,8 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
           SnackBar(
             content: Text(
               _isEditing
-                  ? 'Could not update the appointment.'
-                  : 'Could not create the appointment.',
+                  ? 'Не удалось обновить запись.'
+                  : 'Не удалось создать запись.',
             ),
           ),
         );
@@ -208,7 +208,7 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      _isEditing ? 'Edit Appointment' : 'New Appointment',
+                      _isEditing ? 'Редактировать запись' : 'Новая запись',
                       style: const TextStyle(
                         color: Color(0xFF12203F),
                         fontSize: 24,
@@ -232,28 +232,28 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
               ),
               const SizedBox(height: 28),
               _AppointmentField(
-                label: "Doctor's Name",
-                hintText: 'Dr. John Smith',
+                label: 'Имя врача',
+                hintText: 'напр. Д-р Иван Петров',
                 controller: _doctorController,
                 keyboardType: TextInputType.name,
               ),
               const SizedBox(height: 20),
               _AppointmentField(
-                label: 'Specialty',
-                hintText: 'e.g. Cardiologist',
+                label: 'Специализация',
+                hintText: 'напр. Кардиолог',
                 controller: _specialtyController,
                 keyboardType: TextInputType.text,
               ),
               const SizedBox(height: 20),
               _PickerField(
-                label: 'Date',
+                label: 'Дата',
                 text: _formatDateField(_selectedDate),
                 placeholder: 'dd.MM.yyyy',
                 onTap: _pickDate,
               ),
               const SizedBox(height: 20),
               _PickerField(
-                label: 'Time',
+                label: 'Время',
                 text: _selectedTimeInMinutes == null
                     ? null
                     : _formatTime(_selectedTimeInMinutes!),
@@ -262,14 +262,14 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
               ),
               const SizedBox(height: 20),
               _AppointmentField(
-                label: 'Location',
-                hintText: 'Hospital / Clinic name',
+                label: 'Место',
+                hintText: 'Клиника / медицинский центр',
                 controller: _locationController,
                 keyboardType: TextInputType.streetAddress,
               ),
               const SizedBox(height: 24),
               const Text(
-                'Visit Type',
+                'Тип визита',
                 style: TextStyle(
                   color: Color(0xFF61738F),
                   fontSize: 16,
@@ -281,7 +281,7 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
                 children: [
                   Expanded(
                     child: _VisitTypeOption(
-                      label: 'One-Time',
+                      label: 'Разовый',
                       icon: Icons.calendar_today_rounded,
                       selected: _visitType == MedicalVisitType.oneTime,
                       onTap: () {
@@ -294,7 +294,7 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _VisitTypeOption(
-                      label: 'Recurring',
+                      label: 'Регулярный',
                       icon: Icons.sync_rounded,
                       selected: _visitType == MedicalVisitType.recurring,
                       onTap: () {
@@ -336,9 +336,7 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
                           ),
                         )
                       : Text(
-                          _isEditing
-                              ? 'Update Appointment'
-                              : 'Book Appointment',
+                          _isEditing ? 'Обновить запись' : 'Записаться',
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -362,10 +360,9 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
   String _formatTime(int minutes) {
     final hour = minutes ~/ 60;
     final minute = minutes % 60;
-    final isPm = hour >= 12;
-    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+    final displayHour = hour.toString().padLeft(2, '0');
     final displayMinute = minute.toString().padLeft(2, '0');
-    return '$displayHour:$displayMinute ${isPm ? 'PM' : 'AM'}';
+    return '$displayHour:$displayMinute';
   }
 }
 
@@ -436,7 +433,7 @@ class _AppointmentField extends StatelessWidget {
           ),
           validator: (value) {
             if ((value?.trim() ?? '').isEmpty) {
-              return 'Required';
+              return 'Обязательное поле';
             }
             return null;
           },

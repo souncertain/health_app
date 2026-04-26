@@ -9,6 +9,8 @@ class HealthMetricsLocalDataSource {
   HealthMetricsLocalDataSource();
 
   static const _storageKey = 'metrics.health_metrics';
+  static const _storageVersionKey = 'metrics.health_metrics.version';
+  static const _currentStorageVersion = 2;
 
   Future<List<HealthMetricModel>> getMetrics() async {
     final preferences = await SharedPreferences.getInstance();
@@ -21,9 +23,20 @@ class HealthMetricsLocalDataSource {
     }
 
     final decoded = jsonDecode(raw) as List<dynamic>;
-    return decoded
-        .map((item) => HealthMetricModel.fromJson(item as Map<String, dynamic>))
-        .toList();
+    final storedVersion = preferences.getInt(_storageVersionKey) ?? 1;
+    final normalizedDecoded = storedVersion < _currentStorageVersion
+        ? _migrateStoredMetrics(decoded)
+        : decoded
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+
+    final metrics = normalizedDecoded.map(HealthMetricModel.fromJson).toList();
+
+    if (storedVersion < _currentStorageVersion) {
+      await saveAll(metrics);
+    }
+
+    return metrics;
   }
 
   Future<void> saveAll(List<HealthMetricModel> metrics) async {
@@ -32,6 +45,40 @@ class HealthMetricsLocalDataSource {
       metrics.map((metric) => metric.toJson()).toList(),
     );
     await preferences.setString(_storageKey, encoded);
+    await preferences.setInt(_storageVersionKey, _currentStorageVersion);
+  }
+
+  List<Map<String, dynamic>> _migrateStoredMetrics(List<dynamic> decoded) {
+    return decoded.map((item) {
+      final json = Map<String, dynamic>.from(item as Map);
+      final id = json['id'] as String? ?? '';
+      final title = json['title'] as String? ?? '';
+
+      switch (id) {
+        case 'metric-001':
+          if (title == 'Blood Sugar') {
+            json['title'] = 'Сахар в крови';
+          }
+          break;
+        case 'metric-002':
+          if (title == 'Hemoglobin') {
+            json['title'] = 'Гемоглобин';
+          }
+          break;
+        case 'metric-003':
+          if (title == 'Cholesterol') {
+            json['title'] = 'Холестерин';
+          }
+          break;
+        case 'metric-004':
+          if (title == 'BMI') {
+            json['title'] = 'ИМТ';
+          }
+          break;
+      }
+
+      return json;
+    }).toList();
   }
 
   List<HealthMetricModel> _buildSeedMetrics() {
@@ -41,7 +88,7 @@ class HealthMetricsLocalDataSource {
     return [
       _seedMetric(
         id: 'metric-001',
-        title: 'Blood Sugar',
+        title: 'Сахар в крови',
         unit: 'mg/dL',
         targetMin: 70,
         targetMax: 100,
@@ -51,7 +98,7 @@ class HealthMetricsLocalDataSource {
       ),
       _seedMetric(
         id: 'metric-002',
-        title: 'Hemoglobin',
+        title: 'Гемоглобин',
         unit: 'g/dL',
         targetMin: 12,
         targetMax: 17.5,
@@ -61,7 +108,7 @@ class HealthMetricsLocalDataSource {
       ),
       _seedMetric(
         id: 'metric-003',
-        title: 'Cholesterol',
+        title: 'Холестерин',
         unit: 'mg/dL',
         targetMin: 0,
         targetMax: 200,
@@ -71,7 +118,7 @@ class HealthMetricsLocalDataSource {
       ),
       _seedMetric(
         id: 'metric-004',
-        title: 'BMI',
+        title: 'ИМТ',
         unit: 'kg/m2',
         targetMin: 18.5,
         targetMax: 24.9,

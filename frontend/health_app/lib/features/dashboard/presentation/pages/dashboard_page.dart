@@ -147,7 +147,7 @@ class DashboardPageState extends State<DashboardPage> {
                                   iconColor: const Color(0xFFEF4444),
                                   value: _controller.averageSystolic,
                                   unit: 'mmHg',
-                                  label: 'Avg Systolic',
+                                  label: 'Ср. верхнее',
                                   compact: isCompact,
                                 ),
                               ),
@@ -159,7 +159,7 @@ class DashboardPageState extends State<DashboardPage> {
                                   iconColor: const Color(0xFF2563EB),
                                   value: _controller.averageDiastolic,
                                   unit: 'mmHg',
-                                  label: 'Avg Diastolic',
+                                  label: 'Ср. нижнее',
                                   compact: isCompact,
                                 ),
                               ),
@@ -170,8 +170,8 @@ class DashboardPageState extends State<DashboardPage> {
                                   iconBackground: const Color(0xFFEAE4FF),
                                   iconColor: const Color(0xFF7C3AED),
                                   value: _controller.averagePulse,
-                                  unit: 'bpm',
-                                  label: 'Avg Pulse',
+                                  unit: 'уд/мин',
+                                  label: 'Ср. пульс',
                                   compact: isCompact,
                                 ),
                               ),
@@ -235,7 +235,7 @@ class DashboardPageState extends State<DashboardPage> {
                                 size: isCompact ? 26 : 30,
                               ),
                               label: Text(
-                                'Add Measurement',
+                                'Добавить измерение',
                                 style: TextStyle(
                                   fontSize: isCompact ? 16 : 18,
                                   fontWeight: FontWeight.w700,
@@ -253,30 +253,48 @@ class DashboardPageState extends State<DashboardPage> {
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                'Recent Readings',
-                                style: theme.textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: const Color(0xFF0C1C46),
-                                  fontSize: isCompact ? 22 : 24,
+                              Expanded(
+                                child: Text(
+                                  'Последние измерения',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.headlineSmall
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF0C1C46),
+                                        fontSize: isCompact ? 22 : 24,
+                                      ),
                                 ),
                               ),
-                              const Spacer(),
+                              SizedBox(width: isCompact ? 8 : 12),
                               TextButton(
                                 onPressed: _openAllReadingsPage,
                                 style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
                                   foregroundColor: const Color(0xFF18A84D),
                                   textStyle: TextStyle(
-                                    fontSize: isCompact ? 16 : 18,
+                                    fontSize: isCompact ? 14 : 16,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Text('View All'),
-                                    SizedBox(width: 4),
-                                    Icon(Icons.chevron_right_rounded),
+                                    Text(
+                                      'Все записи',
+                                      style: TextStyle(
+                                        fontSize: isCompact ? 14 : 16,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: isCompact ? 20 : 22,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -364,7 +382,7 @@ class _DashboardHeroSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Good Morning',
+                        'Доброе утро',
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.92),
                           fontWeight: FontWeight.w600,
@@ -373,7 +391,7 @@ class _DashboardHeroSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Alex Johnson',
+                        'Алекс Джонсон',
                         style: theme.textTheme.headlineLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -434,7 +452,7 @@ class _DashboardHeroSection extends StatelessWidget {
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
-                          'Latest Reading',
+                          'Последнее измерение',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 17,
@@ -462,7 +480,7 @@ class _DashboardHeroSection extends StatelessWidget {
                             const SizedBox(width: 6),
                             Text(
                               latestReading == null
-                                  ? 'No data'
+                                  ? 'Нет данных'
                                   : latestStyle.label,
                               style: TextStyle(
                                 color: latestStyle.accent,
@@ -484,7 +502,7 @@ class _DashboardHeroSection extends StatelessWidget {
                           child: _DashboardReadingValue(
                             value: latestReading?.systolic.toString() ?? '--',
                             unit: 'mmHg',
-                            label: 'Systolic',
+                            label: 'Верхнее',
                             compact: true,
                           ),
                         ),
@@ -504,7 +522,7 @@ class _DashboardHeroSection extends StatelessWidget {
                           child: _DashboardReadingValue(
                             value: latestReading?.diastolic.toString() ?? '--',
                             unit: 'mmHg',
-                            label: 'Diastolic',
+                            label: 'Нижнее',
                             compact: true,
                           ),
                         ),
@@ -523,7 +541,7 @@ class _DashboardHeroSection extends StatelessWidget {
                           child: _DashboardReadingValue(
                             value: latestReading?.systolic.toString() ?? '--',
                             unit: 'mmHg',
-                            label: 'Systolic',
+                            label: 'Верхнее',
                           ),
                         ),
                         const Padding(
@@ -542,7 +560,7 @@ class _DashboardHeroSection extends StatelessWidget {
                           child: _DashboardReadingValue(
                             value: latestReading?.diastolic.toString() ?? '--',
                             unit: 'mmHg',
-                            label: 'Diastolic',
+                            label: 'Нижнее',
                           ),
                         ),
                         Expanded(
@@ -558,8 +576,8 @@ class _DashboardHeroSection extends StatelessWidget {
                   const SizedBox(height: 18),
                   Text(
                     latestReading == null
-                        ? 'Add your first reading to populate the dashboard'
-                        : 'Today, ${formatMonthDayTime(latestReading!.recordedAt)}',
+                        ? 'Добавьте первое измерение, чтобы заполнить главную страницу'
+                        : 'Сегодня, ${formatMonthDayTime(latestReading!.recordedAt)}',
                     style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.72),
                       fontSize: isCompact ? 14 : 15,
@@ -683,7 +701,7 @@ class _DashboardPulseValue extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'bpm',
+          'уд/мин',
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.86),
             fontSize: compact ? 14 : 16,
@@ -821,7 +839,7 @@ class _DashboardFitnessSyncCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Fitness Tracker Sync',
+                            'Синхронизация с трекером',
                             style: TextStyle(
                               color: Color(0xFF20449D),
                               fontSize: 16,
@@ -830,7 +848,7 @@ class _DashboardFitnessSyncCard extends StatelessWidget {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Connect Apple Health / Google Fit / Garmin',
+                            'Подключите Apple Health / Google Fit / Garmin',
                             style: TextStyle(
                               color: Color(0xFF3165E6),
                               fontSize: 14,
@@ -861,7 +879,7 @@ class _DashboardFitnessSyncCard extends StatelessWidget {
                       ),
                     ),
                     child: const Text(
-                      'Connect',
+                      'Подключить',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 16,
@@ -892,7 +910,7 @@ class _DashboardFitnessSyncCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Fitness Tracker Sync',
+                        'Синхронизация с трекером',
                         style: TextStyle(
                           color: Color(0xFF20449D),
                           fontSize: 18,
@@ -901,7 +919,7 @@ class _DashboardFitnessSyncCard extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Connect Apple Health / Google Fit / Garmin',
+                        'Подключите Apple Health / Google Fit / Garmin',
                         style: TextStyle(
                           color: Color(0xFF3165E6),
                           fontSize: 16,
@@ -928,7 +946,7 @@ class _DashboardFitnessSyncCard extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    'Connect',
+                    'Подключить',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
                   ),
                 ),
@@ -958,7 +976,7 @@ class _EmptyReadingsState extends StatelessWidget {
         ],
       ),
       child: const Text(
-        'Your saved measurements will appear here.',
+        'Здесь появятся сохраненные измерения.',
         style: TextStyle(
           color: Color(0xFF90A4C4),
           fontSize: 15,

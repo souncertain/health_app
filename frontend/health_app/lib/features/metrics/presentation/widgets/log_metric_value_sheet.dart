@@ -117,7 +117,9 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save the metric value.')),
+          const SnackBar(
+            content: Text('Не удалось сохранить значение метрики.'),
+          ),
         );
       }
     } finally {
@@ -152,7 +154,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Log ${widget.metric.title}',
+                      'Записать ${widget.metric.title}',
                       style: const TextStyle(
                         color: Color(0xFF12203F),
                         fontSize: 24,
@@ -176,7 +178,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Normal range: '
+                'Нормальный диапазон: '
                 '${_formatMetricNumber(widget.metric.targetMin)}-'
                 '${_formatMetricNumber(widget.metric.targetMax)} ${widget.metric.unit}',
                 style: const TextStyle(
@@ -214,7 +216,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
                   fontWeight: FontWeight.w800,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Enter ${widget.metric.unit}',
+                  hintText: 'Введите ${widget.metric.unit}',
                   hintStyle: TextStyle(
                     color: visuals.accentColor.withValues(alpha: 0.45),
                     fontSize: 28,
@@ -258,10 +260,10 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
                 validator: (value) {
                   final trimmed = value?.trim() ?? '';
                   if (trimmed.isEmpty) {
-                    return 'Enter a value';
+                    return 'Введите значение';
                   }
                   if (double.tryParse(trimmed.replaceAll(',', '.')) == null) {
-                    return 'Enter a number';
+                    return 'Введите число';
                   }
                   return null;
                 },
@@ -323,7 +325,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
               if (_selectedDateHasExistingValue) ...[
                 const SizedBox(height: 10),
                 const Text(
-                  'A saved value already exists for this date. Saving will replace it.',
+                  'На эту дату уже есть сохраненное значение. При сохранении оно будет заменено.',
                   style: TextStyle(
                     color: Color(0xFF8DA2C0),
                     fontSize: 13,
@@ -361,7 +363,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
                           ),
                         )
                       : const Text(
-                          'Save Value',
+                          'Сохранить значение',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
@@ -380,20 +382,20 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
 String _formatDisplayDate(DateTime date) {
   const monthNames = [
     '',
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
+    'янв.',
+    'февр.',
+    'мар.',
+    'апр.',
+    'мая',
+    'июн.',
+    'июл.',
+    'авг.',
+    'сент.',
+    'окт.',
+    'нояб.',
+    'дек.',
   ];
-  return '${monthNames[date.month]} ${date.day}, ${date.year}';
+  return '${date.day} ${monthNames[date.month]} ${date.year}';
 }
 
 String _formatMetricNumber(double value) {

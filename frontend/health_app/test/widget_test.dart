@@ -16,130 +16,130 @@ void main() {
     await tester.pumpWidget(const HealthApp());
     await tester.pumpAndSettle();
 
-    expect(find.text('Good Morning'), findsOneWidget);
-    expect(find.text('Latest Reading'), findsOneWidget);
+    expect(find.text('Доброе утро'), findsOneWidget);
+    expect(find.text('Последнее измерение'), findsOneWidget);
 
-    await tester.tap(find.text('Meds').first);
+    await tester.tap(find.text('Препараты').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Medications'), findsOneWidget);
-    expect(find.textContaining('Progress for '), findsOneWidget);
+    expect(find.text('Препараты'), findsWidgets);
+    expect(find.textContaining('Прогресс за '), findsOneWidget);
 
-    await tester.tap(find.text('Dashboard').first);
+    await tester.tap(find.text('Главная').first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    expect(find.text('Add Medication'), findsWidgets);
+    expect(find.text('Добавить препарат'), findsWidgets);
 
-    await tester.tap(find.text('Add Medication').first);
+    await tester.tap(find.text('Добавить препарат').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('New Medication'), findsOneWidget);
+    expect(find.text('Новый препарат'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Medications'), findsOneWidget);
+    expect(find.text('Препараты'), findsWidgets);
 
-    await tester.tap(find.text('Metrics').first);
+    await tester.tap(find.text('Метрики').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Your Numbers'), findsOneWidget);
-    expect(find.text('Blood Sugar'), findsOneWidget);
+    expect(find.text('Ваши показатели'), findsOneWidget);
+    expect(find.text('Сахар в крови'), findsOneWidget);
 
-    await tester.longPress(find.text('Blood Sugar').first);
+    await tester.longPress(find.text('Сахар в крови').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Edit Metric'), findsOneWidget);
-    expect(find.text('Delete'), findsOneWidget);
+    expect(find.text('Редактировать метрику'), findsOneWidget);
+    expect(find.text('Удалить'), findsOneWidget);
 
-    await tester.ensureVisible(find.text('Delete'));
-    await tester.tap(find.text('Delete'));
+    await tester.ensureVisible(find.text('Удалить'));
+    await tester.tap(find.text('Удалить'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Delete metric?'), findsOneWidget);
+    expect(find.text('Удалить метрику?'), findsOneWidget);
     expect(
       find.text(
-        'This will remove the metric and all of its saved values from local storage.',
+        'Метрика и все сохраненные значения будут удалены из локального хранилища.',
       ),
       findsOneWidget,
     );
 
-    await tester.tap(find.text('Cancel'));
+    await tester.tap(find.text('Отмена'));
     await tester.pumpAndSettle();
 
     await tester.enterText(
       find.byType(TextFormField).at(0),
-      'Blood Sugar Plus',
+      'Сахар в крови плюс',
     );
     await tester.enterText(find.byType(TextFormField).at(1), 'mmol/L');
     await tester.enterText(find.byType(TextFormField).at(2), '75');
     await tester.enterText(find.byType(TextFormField).at(3), '110');
-    await tester.ensureVisible(find.text('Update Metric'));
-    await tester.tap(find.text('Update Metric'));
+    await tester.ensureVisible(find.text('Обновить метрику'));
+    await tester.tap(find.text('Обновить метрику'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Blood Sugar Plus'), findsOneWidget);
+    expect(find.text('Сахар в крови плюс'), findsOneWidget);
 
-    await tester.tap(find.text('Dashboard').first);
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.byType(FloatingActionButton));
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Log Metric').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Choose Metric'), findsOneWidget);
-
-    await tester.tap(find.text('Blood Sugar Plus').last);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Log Blood Sugar Plus'), findsOneWidget);
-
-    await tester.tap(find.byIcon(Icons.close_rounded).first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Your Numbers'), findsOneWidget);
-
-    await tester.tap(find.text('Dashboard').first);
+    await tester.tap(find.text('Главная').first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Add BP Reading').first);
+    await tester.tap(find.text('Записать метрику').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Save Reading'), findsOneWidget);
+    expect(find.text('Выберите метрику'), findsOneWidget);
+
+    await tester.tap(find.text('Сахар в крови плюс').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Записать Сахар в крови плюс'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Good Morning'), findsOneWidget);
+    expect(find.text('Ваши показатели'), findsOneWidget);
 
-    await tester.tap(find.text('Visits').first);
-    await tester.pumpAndSettle();
-
-    expect(find.text('Medical Visits'), findsOneWidget);
-    expect(find.text('AI Prescription Scanner'), findsOneWidget);
-
-    await tester.tap(find.text('Dashboard').first);
+    await tester.tap(find.text('Главная').first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Book Appointment').first);
+    await tester.tap(find.text('Добавить давление').first);
     await tester.pumpAndSettle();
 
-    expect(find.text('New Appointment'), findsOneWidget);
+    expect(find.text('Сохранить запись'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close_rounded).first);
     await tester.pumpAndSettle();
 
-    expect(find.text('Medical Visits'), findsOneWidget);
+    expect(find.text('Доброе утро'), findsOneWidget);
+
+    await tester.tap(find.text('Визиты').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Визиты к врачу'), findsOneWidget);
+    expect(find.text('AI-сканер рецепта'), findsOneWidget);
+
+    await tester.tap(find.text('Главная').first);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Записать на прием').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Новая запись'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close_rounded).first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Визиты к врачу'), findsOneWidget);
   });
 }

@@ -66,7 +66,7 @@ class DashboardController extends ChangeNotifier {
       _readings = List<BloodPressureReading>.from(readings)
         ..sort((left, right) => right.recordedAt.compareTo(left.recordedAt));
     } catch (_) {
-      _errorMessage = 'Could not load blood pressure readings.';
+      _errorMessage = 'Не удалось загрузить измерения давления.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -106,7 +106,7 @@ class DashboardController extends ChangeNotifier {
       await _saveReading(reading);
       await refresh();
     } catch (_) {
-      _errorMessage = 'Could not save the reading.';
+      _errorMessage = 'Не удалось сохранить измерение.';
       _isSaving = false;
       notifyListeners();
       rethrow;
@@ -125,7 +125,7 @@ class DashboardController extends ChangeNotifier {
       await _deleteReading(reading.id);
       await refresh();
     } catch (_) {
-      _errorMessage = 'Could not delete the reading.';
+      _errorMessage = 'Не удалось удалить измерение.';
       _isSaving = false;
       notifyListeners();
       rethrow;

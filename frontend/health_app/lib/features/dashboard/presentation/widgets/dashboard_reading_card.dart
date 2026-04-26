@@ -23,8 +23,8 @@ class DashboardReadingCard extends StatelessWidget {
     final style = resolveBloodPressureCategoryStyle(reading.category);
     final subtitle = detailed
         ? '${formatMonthDayYear(reading.recordedAt)} - '
-              '${formatTimeOfDay(reading.recordedAt)} - ${reading.pulse} bpm'
-        : '${formatMonthDay(reading.recordedAt)} - ${reading.pulse} bpm';
+              '${formatTimeOfDay(reading.recordedAt)} - ${reading.pulse} уд/мин'
+        : '${formatMonthDay(reading.recordedAt)} - ${reading.pulse} уд/мин';
 
     return Material(
       color: Colors.transparent,

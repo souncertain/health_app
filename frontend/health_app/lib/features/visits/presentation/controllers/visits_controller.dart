@@ -45,7 +45,7 @@ class VisitsController extends ChangeNotifier {
       _visits = List<MedicalVisit>.from(visits)
         ..sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
     } catch (_) {
-      _errorMessage = 'Could not load visits.';
+      _errorMessage = 'Не удалось загрузить визиты.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -108,7 +108,7 @@ class VisitsController extends ChangeNotifier {
 
     await _persistVisit(
       visit,
-      errorMessage: 'Could not save the visit.',
+      errorMessage: 'Не удалось сохранить визит.',
       rethrowOnFailure: true,
     );
   }
@@ -116,7 +116,7 @@ class VisitsController extends ChangeNotifier {
   Future<void> rescheduleVisit(MedicalVisit visit, int timeInMinutes) async {
     await _persistVisit(
       visit.copyWith(timeInMinutes: timeInMinutes, updatedAt: DateTime.now()),
-      errorMessage: 'Could not reschedule the visit.',
+      errorMessage: 'Не удалось перенести визит.',
       rethrowOnFailure: true,
     );
   }
@@ -130,7 +130,7 @@ class VisitsController extends ChangeNotifier {
       await _deleteVisit(visit.id);
       await refresh();
     } catch (_) {
-      _errorMessage = 'Could not delete the visit.';
+      _errorMessage = 'Не удалось удалить визит.';
       rethrow;
     } finally {
       _isSaving = false;

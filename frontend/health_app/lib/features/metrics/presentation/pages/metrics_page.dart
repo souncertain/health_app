@@ -166,7 +166,7 @@ class MetricsPageState extends State<MetricsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    'Choose Metric',
+                    'Выберите метрику',
                     style: TextStyle(
                       color: Color(0xFF12203F),
                       fontSize: 22,
@@ -370,7 +370,7 @@ class MetricsPageState extends State<MetricsPage> {
                                     size: isCompact ? 26 : 30,
                                   ),
                                   label: Text(
-                                    'Add Custom Metric',
+                                    'Добавить свою метрику',
                                     style: TextStyle(
                                       fontSize: isCompact ? 16 : 18,
                                       fontWeight: FontWeight.w700,
@@ -440,7 +440,7 @@ class _MetricsHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Health Metrics',
+                        'Показатели здоровья',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.82),
                           fontSize: isCompact ? 15 : 16,
@@ -449,7 +449,7 @@ class _MetricsHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Your Numbers',
+                        'Ваши показатели',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isCompact ? 28 : 32,
@@ -480,17 +480,17 @@ class _MetricsHeader extends StatelessWidget {
               runSpacing: 12,
               children: [
                 _MetricsStatusChip(
-                  label: '$normalCount Normal',
+                  label: '$normalCount Норма',
                   background: const Color(0xFFE9FBEF),
                   foreground: const Color(0xFF10A647),
                 ),
                 _MetricsStatusChip(
-                  label: '$monitorCount Monitor',
+                  label: '$monitorCount Контроль',
                   background: const Color(0xFFFFF2C9),
                   foreground: const Color(0xFFE88A0C),
                 ),
                 _MetricsStatusChip(
-                  label: '$criticalCount Critical',
+                  label: '$criticalCount Критично',
                   background: const Color(0xFFFFE5E6),
                   foreground: const Color(0xFFEF4444),
                 ),
@@ -704,7 +704,7 @@ class _MetricCard extends StatelessWidget {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Target: '
+                  'Цель: '
                   '${_formatMetricNumber(metric.targetMin)}-'
                   '${_formatMetricNumber(metric.targetMax)} ${metric.unit}',
                   style: TextStyle(
@@ -733,7 +733,7 @@ class _MetricCard extends StatelessWidget {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    '7-Day History',
+                    'История за 7 дней',
                     style: TextStyle(
                       color: const Color(0xFF4F6382),
                       fontSize: compact ? 18 : 20,
@@ -764,7 +764,7 @@ class _MetricCard extends StatelessWidget {
                     ),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text(
-                      'Log New Value',
+                      'Записать значение',
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
@@ -821,25 +821,25 @@ class _MetricSeverityPresentation {
     switch (severity) {
       case MetricSeverity.normal:
         return const _MetricSeverityPresentation(
-          label: 'Normal',
+          label: 'Норма',
           foreground: Color(0xFF10A647),
           background: Color(0xFFE6FBEA),
         );
       case MetricSeverity.monitor:
         return const _MetricSeverityPresentation(
-          label: 'Monitor',
+          label: 'Контроль',
           foreground: Color(0xFFE88A0C),
           background: Color(0xFFFFF2C9),
         );
       case MetricSeverity.critical:
         return const _MetricSeverityPresentation(
-          label: 'Critical',
+          label: 'Критично',
           foreground: Color(0xFFEF4444),
           background: Color(0xFFFFE5E6),
         );
       case MetricSeverity.noData:
         return const _MetricSeverityPresentation(
-          label: 'No Data',
+          label: 'Нет данных',
           foreground: Color(0xFF7184A2),
           background: Color(0xFFF1F5FB),
         );
@@ -1073,7 +1073,7 @@ class _MetricHistoryChartState extends State<_MetricHistoryChart> {
           if (!widget.hasRenderableHistory) ...[
             const SizedBox(height: 10),
             const Text(
-              'Add at least two values to see the chart.',
+              'Добавьте хотя бы два значения, чтобы увидеть график.',
               style: TextStyle(
                 color: Color(0xFF9AACCA),
                 fontSize: 13,
@@ -1392,7 +1392,7 @@ class _EmptyMetricsState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            'No metrics created yet',
+            'Метрик пока нет',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF0C1C46),
@@ -1402,7 +1402,7 @@ class _EmptyMetricsState extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Create a custom metric to start tracking your own health values.',
+            'Создайте свою метрику, чтобы отслеживать нужные показатели здоровья.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF6F86A9),
@@ -1426,7 +1426,7 @@ class _EmptyMetricsState extends StatelessWidget {
               ),
               icon: const Icon(Icons.add_rounded),
               label: const Text(
-                'Create Metric',
+                'Создать метрику',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
               ),
             ),
@@ -1440,19 +1440,19 @@ class _EmptyMetricsState extends StatelessWidget {
 String _weekdayLabel(int weekday) {
   switch (weekday) {
     case DateTime.monday:
-      return 'Mon';
+      return 'Пн';
     case DateTime.tuesday:
-      return 'Tue';
+      return 'Вт';
     case DateTime.wednesday:
-      return 'Wed';
+      return 'Ср';
     case DateTime.thursday:
-      return 'Thu';
+      return 'Чт';
     case DateTime.friday:
-      return 'Fri';
+      return 'Пт';
     case DateTime.saturday:
-      return 'Sat';
+      return 'Сб';
     case DateTime.sunday:
-      return 'Sun';
+      return 'Вс';
   }
   return '';
 }

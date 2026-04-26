@@ -25,18 +25,18 @@ class VisitsPageState extends State<VisitsPage> {
   MedicalVisitType _selectedFilter = MedicalVisitType.oneTime;
 
   static const _monthNames = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'янв.',
+    'февр.',
+    'мар.',
+    'апр.',
+    'мая',
+    'июн.',
+    'июл.',
+    'авг.',
+    'сент.',
+    'окт.',
+    'нояб.',
+    'дек.',
   ];
 
   @override
@@ -116,7 +116,7 @@ class VisitsPageState extends State<VisitsPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not reschedule the visit.')),
+        const SnackBar(content: Text('Не удалось перенести визит.')),
       );
     }
   }
@@ -129,7 +129,7 @@ class VisitsPageState extends State<VisitsPage> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not cancel the visit.')),
+        const SnackBar(content: Text('Не удалось отменить визит.')),
       );
     }
   }
@@ -171,7 +171,7 @@ class VisitsPageState extends State<VisitsPage> {
                                 ? null
                                 : _buildRemainingLabel(nextVisit),
                             nextVisitSubtitle: nextVisit == null
-                                ? 'Add your first doctor appointment'
+                                ? 'Добавьте первую запись к врачу'
                                 : '${nextVisit.doctorName} - ${_formatShortDate(nextVisit.appointmentDate)}',
                             onFilterSelected: (filter) {
                               setState(() {
@@ -261,7 +261,7 @@ class VisitsPageState extends State<VisitsPage> {
                                   size: isCompact ? 26 : 30,
                                 ),
                                 label: Text(
-                                  'Book Appointment',
+                                  'Записаться',
                                   style: TextStyle(
                                     fontSize: isCompact ? 16 : 18,
                                     fontWeight: FontWeight.w700,
@@ -286,20 +286,19 @@ class VisitsPageState extends State<VisitsPage> {
   }
 
   String _formatShortDate(DateTime date) {
-    return '${_monthNames[date.month - 1]} ${date.day}';
+    return '${date.day} ${_monthNames[date.month - 1]}';
   }
 
   String _formatLongDate(DateTime date) {
-    return '${_monthNames[date.month - 1]} ${date.day}, ${date.year}';
+    return '${date.day} ${_monthNames[date.month - 1]} ${date.year}';
   }
 
   String _formatTime(int minutes) {
     final hour = minutes ~/ 60;
     final minute = minutes % 60;
-    final isPm = hour >= 12;
-    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+    final displayHour = hour.toString().padLeft(2, '0');
     final displayMinute = minute.toString().padLeft(2, '0');
-    return '$displayHour:$displayMinute ${isPm ? 'PM' : 'AM'}';
+    return '$displayHour:$displayMinute';
   }
 
   String _buildRemainingLabel(MedicalVisit visit) {
@@ -307,12 +306,12 @@ class VisitsPageState extends State<VisitsPage> {
     final difference = visit.appointmentDate.difference(today).inDays;
 
     if (difference <= 0) {
-      return 'Today';
+      return 'Сегодня';
     }
     if (difference == 1) {
-      return '1 day';
+      return '1 день';
     }
-    return '$difference days';
+    return '$difference дн.';
   }
 }
 
@@ -358,7 +357,7 @@ class _VisitsHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Appointments',
+                        'Приемы',
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.82),
                           fontSize: isCompact ? 15 : 16,
@@ -367,7 +366,7 @@ class _VisitsHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Medical Visits',
+                        'Визиты к врачу',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: isCompact ? 28 : 32,
@@ -425,7 +424,7 @@ class _VisitsHeader extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Next Appointment',
+                          'Ближайший визит',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -448,7 +447,7 @@ class _VisitsHeader extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        remainingLabel ?? 'No visits',
+                        remainingLabel ?? 'Визитов нет',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -457,7 +456,7 @@ class _VisitsHeader extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        nextVisit == null ? 'scheduled' : 'remaining',
+                        nextVisit == null ? 'запланировано' : 'осталось',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 14,
@@ -474,7 +473,7 @@ class _VisitsHeader extends StatelessWidget {
               children: [
                 Expanded(
                   child: _VisitFilterChip(
-                    label: 'One-Time',
+                    label: 'Разовый',
                     icon: Icons.calendar_today_rounded,
                     selected: selectedFilter == MedicalVisitType.oneTime,
                     onTap: () => onFilterSelected(MedicalVisitType.oneTime),
@@ -483,7 +482,7 @@ class _VisitsHeader extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _VisitFilterChip(
-                    label: 'Recurring',
+                    label: 'Регулярный',
                     icon: Icons.sync_rounded,
                     selected: selectedFilter == MedicalVisitType.recurring,
                     onTap: () => onFilterSelected(MedicalVisitType.recurring),
@@ -581,8 +580,8 @@ class _EmptyVisitsState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             visitType == MedicalVisitType.oneTime
-                ? 'No one-time visits yet'
-                : 'No recurring visits yet',
+                ? 'Разовых визитов пока нет'
+                : 'Регулярных визитов пока нет',
             style: const TextStyle(
               color: Color(0xFF12203F),
               fontSize: 20,
@@ -591,7 +590,7 @@ class _EmptyVisitsState extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           const Text(
-            'Add a doctor appointment to start tracking your upcoming visits.',
+            'Добавьте визит к врачу, чтобы отслеживать предстоящие посещения.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: Color(0xFF61738F),
@@ -612,7 +611,7 @@ class _EmptyVisitsState extends StatelessWidget {
             ),
             icon: const Icon(Icons.add_rounded),
             label: const Text(
-              'Book Appointment',
+              'Записаться',
               style: TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -791,7 +790,7 @@ class _VisitCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _VisitActionButton(
-                      label: 'Reschedule',
+                      label: 'Перенести',
                       background: palette.rescheduleBackground,
                       foreground: palette.rescheduleForeground,
                       onTap: onReschedule,
@@ -800,7 +799,7 @@ class _VisitCard extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _VisitActionButton(
-                      label: 'Cancel',
+                      label: 'Отменить',
                       background: const Color(0xFFFCE0E0),
                       foreground: const Color(0xFFEF2D2D),
                       onTap: onCancel,
@@ -936,7 +935,7 @@ class _PrescriptionScannerCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AI Prescription Scanner',
+                      'AI-сканер рецепта',
                       style: TextStyle(
                         color: Color(0xFF0C1C46),
                         fontSize: 18,
@@ -945,7 +944,7 @@ class _PrescriptionScannerCard extends StatelessWidget {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Upload a prescription to extract medications',
+                      'Загрузите рецепт, чтобы извлечь названия препаратов',
                       style: TextStyle(
                         color: Color(0xFF5B7397),
                         fontSize: 16,
@@ -973,7 +972,7 @@ class _PrescriptionScannerCard extends StatelessWidget {
               ),
               icon: const Icon(Icons.upload_rounded, size: 24),
               label: const Text(
-                'Scan Prescription',
+                'Сканировать рецепт',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),

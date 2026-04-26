@@ -10,7 +10,7 @@ class MedicationLocalDataSource {
 
   static const _storageKey = 'meds.medications';
   static const _storageVersionKey = 'meds.medications.version';
-  static const _currentStorageVersion = 2;
+  static const _currentStorageVersion = 3;
   static const _legacySeedIds = {'med-001', 'med-002', 'med-003', 'med-004'};
 
   Future<List<MedicationModel>> getMedications() async {
@@ -26,7 +26,7 @@ class MedicationLocalDataSource {
     final decoded = jsonDecode(raw) as List<dynamic>;
     final storedVersion = preferences.getInt(_storageVersionKey) ?? 1;
     final normalizedDecoded = storedVersion < _currentStorageVersion
-        ? _migrateLegacyMedications(decoded)
+        ? _migrateStoredMedications(decoded, storedVersion)
         : decoded
               .map((item) => Map<String, dynamic>.from(item as Map))
               .toList();
@@ -51,7 +51,10 @@ class MedicationLocalDataSource {
     await preferences.setInt(_storageVersionKey, _currentStorageVersion);
   }
 
-  List<Map<String, dynamic>> _migrateLegacyMedications(List<dynamic> decoded) {
+  List<Map<String, dynamic>> _migrateStoredMedications(
+    List<dynamic> decoded,
+    int storedVersion,
+  ) {
     return decoded.map((item) {
       final json = Map<String, dynamic>.from(item as Map);
       final id = json['id'] as String? ?? '';
@@ -59,21 +62,61 @@ class MedicationLocalDataSource {
         return json;
       }
 
-      final scheduledWeekdays =
-          (json['scheduledWeekdays'] as List<dynamic>? ?? const <dynamic>[])
-              .map((value) => value as int)
-              .toList();
-      final existingStatuses = Map<String, dynamic>.from(
-        json['dayStatuses'] as Map<String, dynamic>? ?? const {},
-      );
+      if (storedVersion < 2) {
+        final scheduledWeekdays =
+            (json['scheduledWeekdays'] as List<dynamic>? ?? const <dynamic>[])
+                .map((value) => value as int)
+                .toList();
+        final existingStatuses = Map<String, dynamic>.from(
+          json['dayStatuses'] as Map<String, dynamic>? ?? const {},
+        );
 
-      json['dayStatuses'] = {
-        for (final weekday in scheduledWeekdays)
-          '$weekday':
-              existingStatuses['$weekday'] == MedicationDayStatus.missed.name
-              ? MedicationDayStatus.missed.name
-              : MedicationDayStatus.pending.name,
-      };
+        json['dayStatuses'] = {
+          for (final weekday in scheduledWeekdays)
+            '$weekday':
+                existingStatuses['$weekday'] == MedicationDayStatus.missed.name
+                ? MedicationDayStatus.missed.name
+                : MedicationDayStatus.pending.name,
+        };
+      }
+
+      if (storedVersion < 3) {
+        final currentName = json['name'] as String? ?? '';
+        switch (id) {
+          case 'med-001':
+            if (currentName == 'Lisinopril') {
+              json['name'] = 'Лизиноприл';
+            }
+            if (json['dosage'] == '10mg') {
+              json['dosage'] = '10 мг';
+            }
+            break;
+          case 'med-002':
+            if (currentName == 'Metformin') {
+              json['name'] = 'Метформин';
+            }
+            if (json['dosage'] == '500mg') {
+              json['dosage'] = '500 мг';
+            }
+            break;
+          case 'med-003':
+            if (currentName == 'Atorvastatin') {
+              json['name'] = 'Аторвастатин';
+            }
+            if (json['dosage'] == '20mg') {
+              json['dosage'] = '20 мг';
+            }
+            break;
+          case 'med-004':
+            if (currentName == 'Aspirin') {
+              json['name'] = 'Аспирин';
+            }
+            if (json['dosage'] == '100mg') {
+              json['dosage'] = '100 мг';
+            }
+            break;
+        }
+      }
 
       return json;
     }).toList();
@@ -89,8 +132,8 @@ class MedicationLocalDataSource {
     return [
       MedicationModel(
         id: 'med-001',
-        name: 'Lisinopril',
-        dosage: '10mg',
+        name: 'Лизиноприл',
+        dosage: '10 мг',
         frequency: MedicationFrequency.onceDaily,
         timesInMinutes: const [8 * 60],
         notificationsEnabled: true,
@@ -102,8 +145,8 @@ class MedicationLocalDataSource {
       ),
       MedicationModel(
         id: 'med-002',
-        name: 'Metformin',
-        dosage: '500mg',
+        name: 'Метформин',
+        dosage: '500 мг',
         frequency: MedicationFrequency.twiceDaily,
         timesInMinutes: const [8 * 60, 20 * 60],
         notificationsEnabled: true,
@@ -115,8 +158,8 @@ class MedicationLocalDataSource {
       ),
       MedicationModel(
         id: 'med-003',
-        name: 'Atorvastatin',
-        dosage: '20mg',
+        name: 'Аторвастатин',
+        dosage: '20 мг',
         frequency: MedicationFrequency.onceDaily,
         timesInMinutes: const [22 * 60],
         notificationsEnabled: false,
@@ -128,8 +171,8 @@ class MedicationLocalDataSource {
       ),
       MedicationModel(
         id: 'med-004',
-        name: 'Aspirin',
-        dosage: '100mg',
+        name: 'Аспирин',
+        dosage: '100 мг',
         frequency: MedicationFrequency.onceDaily,
         timesInMinutes: const [7 * 60],
         notificationsEnabled: true,

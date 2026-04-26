@@ -83,8 +83,8 @@ class _HomeShellPageState extends State<HomeShellPage> {
               MetricsPage(key: _metricsPageKey),
               VisitsPage(key: _visitsPageKey),
               const _FeaturePlaceholderPage(
-                title: 'Profile',
-                subtitle: 'Profile screen will be connected next.',
+                title: 'Профиль',
+                subtitle: 'Экран профиля подключим следующим.',
               ),
             ],
           ),
@@ -98,22 +98,22 @@ class _HomeShellPageState extends State<HomeShellPage> {
               actions: const [
                 AppQuickAction(
                   id: 'add_bp_reading',
-                  label: 'Add BP Reading',
+                  label: 'Добавить давление',
                   color: Color(0xFF1DB954),
                 ),
                 AppQuickAction(
                   id: 'add_medication',
-                  label: 'Add Medication',
+                  label: 'Добавить препарат',
                   color: Color(0xFF1595C9),
                 ),
                 AppQuickAction(
                   id: 'log_metric',
-                  label: 'Log Metric',
+                  label: 'Записать метрику',
                   color: Color(0xFF7C3AED),
                 ),
                 AppQuickAction(
                   id: 'book_appointment',
-                  label: 'Book Appointment',
+                  label: 'Записать на прием',
                   color: Color(0xFFEB8A06),
                 ),
               ],

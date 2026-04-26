@@ -77,7 +77,7 @@ class MedsController extends ChangeNotifier {
               left.timesInMinutes.first.compareTo(right.timesInMinutes.first),
         );
     } catch (_) {
-      _errorMessage = 'Could not load medications.';
+      _errorMessage = 'Не удалось загрузить препараты.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -130,7 +130,7 @@ class MedsController extends ChangeNotifier {
 
     await _persistMedication(
       medication,
-      errorMessage: 'Could not save the medication.',
+      errorMessage: 'Не удалось сохранить препарат.',
       rethrowOnFailure: true,
     );
   }
@@ -144,7 +144,7 @@ class MedsController extends ChangeNotifier {
       await _deleteMedication(medication.id);
       await refresh();
     } catch (_) {
-      _errorMessage = 'Could not delete the medication.';
+      _errorMessage = 'Не удалось удалить препарат.';
       _isSaving = false;
       notifyListeners();
       rethrow;
@@ -160,7 +160,7 @@ class MedsController extends ChangeNotifier {
         notificationsEnabled: !medication.notificationsEnabled,
         updatedAt: DateTime.now(),
       ),
-      errorMessage: 'Could not update notifications.',
+      errorMessage: 'Не удалось обновить уведомления.',
     );
   }
 
@@ -182,7 +182,7 @@ class MedsController extends ChangeNotifier {
 
     await _persistMedication(
       medication.copyWith(dayStatuses: nextStatuses, updatedAt: DateTime.now()),
-      errorMessage: 'Could not update the medication status.',
+      errorMessage: 'Не удалось обновить статус приема.',
     );
   }
 
@@ -411,13 +411,13 @@ class MedsController extends ChangeNotifier {
 
   MedicationForm _resolveForm(String name) {
     final normalized = name.toLowerCase();
-    if (normalized.contains('met')) {
+    if (normalized.contains('met') || normalized.contains('мет')) {
       return MedicationForm.syringe;
     }
-    if (normalized.contains('statin')) {
+    if (normalized.contains('statin') || normalized.contains('статин')) {
       return MedicationForm.circle;
     }
-    if (normalized.contains('pril')) {
+    if (normalized.contains('pril') || normalized.contains('прил')) {
       return MedicationForm.capsule;
     }
     return MedicationForm.tablet;

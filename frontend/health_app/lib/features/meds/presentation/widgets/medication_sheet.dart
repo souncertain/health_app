@@ -135,7 +135,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
     if (_baseTimeInMinutes < 0) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select a time.')));
+      ).showSnackBar(const SnackBar(content: Text('Выберите время приема.')));
       return;
     }
 
@@ -160,7 +160,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not save the medication.')),
+          const SnackBar(content: Text('Не удалось сохранить препарат.')),
         );
       }
     } finally {
@@ -181,21 +181,19 @@ class _MedicationSheetState extends State<MedicationSheet> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Delete medication?'),
-          content: const Text(
-            'This medication will be removed from local storage.',
-          ),
+          title: const Text('Удалить препарат?'),
+          content: const Text('Препарат будет удален из локального хранилища.'),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancel'),
+              child: const Text('Отмена'),
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFFEF4444),
               ),
-              child: const Text('Delete'),
+              child: const Text('Удалить'),
             ),
           ],
         );
@@ -218,7 +216,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not delete the medication.')),
+          const SnackBar(content: Text('Не удалось удалить препарат.')),
         );
       }
     } finally {
@@ -253,7 +251,9 @@ class _MedicationSheetState extends State<MedicationSheet> {
                   children: [
                     Expanded(
                       child: Text(
-                        _isEditing ? 'Edit Medication' : 'New Medication',
+                        _isEditing
+                            ? 'Редактировать препарат'
+                            : 'Новый препарат',
                         style: const TextStyle(
                           color: Color(0xFF12203F),
                           fontSize: 24,
@@ -277,19 +277,19 @@ class _MedicationSheetState extends State<MedicationSheet> {
                 ),
                 const SizedBox(height: 28),
                 _MedicationField(
-                  label: 'Medication Name',
-                  hintText: 'e.g. Lisinopril',
+                  label: 'Название препарата',
+                  hintText: 'напр. Лизиноприл',
                   controller: _nameController,
                 ),
                 const SizedBox(height: 20),
                 _MedicationField(
-                  label: 'Dosage',
-                  hintText: 'e.g. 10mg',
+                  label: 'Дозировка',
+                  hintText: 'напр. 10 мг',
                   controller: _dosageController,
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Time',
+                  'Время',
                   style: const TextStyle(
                     color: Color(0xFF61738F),
                     fontSize: 16,
@@ -339,7 +339,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Frequency',
+                  'Частота приема',
                   style: const TextStyle(
                     color: Color(0xFF61738F),
                     fontSize: 16,
@@ -406,7 +406,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
                       const SizedBox(width: 12),
                       const Expanded(
                         child: Text(
-                          'Enable Notifications',
+                          'Включить уведомления',
                           style: TextStyle(
                             color: Color(0xFF12203F),
                             fontSize: 16,
@@ -444,7 +444,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
                             padding: const EdgeInsets.symmetric(vertical: 18),
                           ),
                           child: const Text(
-                            'Delete',
+                            'Удалить',
                             style: TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
@@ -457,7 +457,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
                         flex: 2,
                         child: _MedicationSubmitButton(
                           busy: _isSubmitting,
-                          label: 'Update Medication',
+                          label: 'Обновить препарат',
                           onPressed: _submit,
                         ),
                       ),
@@ -466,7 +466,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
                 ] else
                   _MedicationSubmitButton(
                     busy: _isSubmitting,
-                    label: 'Add Medication',
+                    label: 'Добавить препарат',
                     onPressed: _submit,
                   ),
               ],
@@ -543,7 +543,7 @@ class _MedicationField extends StatelessWidget {
           validator: (value) {
             final trimmed = value?.trim() ?? '';
             if (trimmed.isEmpty) {
-              return 'Required';
+              return 'Обязательное поле';
             }
             return null;
           },
@@ -605,24 +605,19 @@ class _MedicationSubmitButton extends StatelessWidget {
 String medicationFrequencyLabel(MedicationFrequency frequency) {
   switch (frequency) {
     case MedicationFrequency.onceDaily:
-      return 'Once daily';
+      return '1 раз в день';
     case MedicationFrequency.twiceDaily:
-      return 'Twice daily';
+      return '2 раза в день';
     case MedicationFrequency.threeTimesDaily:
-      return '3x daily';
+      return '3 раза в день';
     case MedicationFrequency.weekly:
-      return 'Weekly';
+      return '1 раз в неделю';
   }
 }
 
 String formatMedicationTime(int totalMinutes) {
   final hour = totalMinutes ~/ 60;
   final minute = totalMinutes % 60;
-  final displayHour = hour == 0
-      ? 12
-      : hour > 12
-      ? hour - 12
-      : hour;
-  final suffix = hour >= 12 ? 'PM' : 'AM';
-  return '$displayHour:${minute.toString().padLeft(2, '0')} $suffix';
+  final displayHour = hour.toString().padLeft(2, '0');
+  return '$displayHour:${minute.toString().padLeft(2, '0')}';
 }

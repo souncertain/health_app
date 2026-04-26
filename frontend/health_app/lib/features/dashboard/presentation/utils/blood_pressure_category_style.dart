@@ -24,7 +24,7 @@ BloodPressureCategoryStyle resolveBloodPressureCategoryStyle(
   switch (category) {
     case BloodPressureCategory.normal:
       return const BloodPressureCategoryStyle(
-        label: 'Normal',
+        label: 'Норма',
         accent: Color(0xFF1DB954),
         softBackground: Color(0xFFE7FAED),
         iconBackground: Color(0xFFDDF8E5),
@@ -32,7 +32,7 @@ BloodPressureCategoryStyle resolveBloodPressureCategoryStyle(
       );
     case BloodPressureCategory.elevated:
       return const BloodPressureCategoryStyle(
-        label: 'Elevated',
+        label: 'Повышено',
         accent: Color(0xFFF59E0B),
         softBackground: Color(0xFFFFF3DA),
         iconBackground: Color(0xFFFFEFD9),
@@ -40,7 +40,7 @@ BloodPressureCategoryStyle resolveBloodPressureCategoryStyle(
       );
     case BloodPressureCategory.highStage1:
       return const BloodPressureCategoryStyle(
-        label: 'High Stage 1',
+        label: 'Гипертензия 1',
         accent: Color(0xFFF97316),
         softBackground: Color(0xFFFFE7D6),
         iconBackground: Color(0xFFFFEFD9),
@@ -48,7 +48,7 @@ BloodPressureCategoryStyle resolveBloodPressureCategoryStyle(
       );
     case BloodPressureCategory.highStage2:
       return const BloodPressureCategoryStyle(
-        label: 'High Stage 2',
+        label: 'Гипертензия 2',
         accent: Color(0xFFEF4444),
         softBackground: Color(0xFFFFE3E3),
         iconBackground: Color(0xFFFFE4EA),
@@ -56,7 +56,7 @@ BloodPressureCategoryStyle resolveBloodPressureCategoryStyle(
       );
     case BloodPressureCategory.hypertensiveCrisis:
       return const BloodPressureCategoryStyle(
-        label: 'Critical',
+        label: 'Критично',
         accent: Color(0xFFC81E1E),
         softBackground: Color(0xFFFFD7D7),
         iconBackground: Color(0xFFFFD6D6),

@@ -68,7 +68,7 @@ class MetricsController extends ChangeNotifier {
           return left.createdAt.compareTo(right.createdAt);
         });
     } catch (_) {
-      _errorMessage = 'Could not load metrics.';
+      _errorMessage = 'Не удалось загрузить метрики.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -97,7 +97,7 @@ class MetricsController extends ChangeNotifier {
       isCustom: true,
     );
 
-    await _persistMetric(metric, errorMessage: 'Could not create the metric.');
+    await _persistMetric(metric, errorMessage: 'Не удалось создать метрику.');
     return metric.id;
   }
 
@@ -117,7 +117,7 @@ class MetricsController extends ChangeNotifier {
         targetMax: targetMax,
         updatedAt: now,
       ),
-      errorMessage: 'Could not update the metric.',
+      errorMessage: 'Не удалось обновить метрику.',
       rethrowOnFailure: true,
     );
   }
@@ -155,7 +155,7 @@ class MetricsController extends ChangeNotifier {
 
     await _persistMetric(
       metric.copyWith(records: updatedRecords, updatedAt: now),
-      errorMessage: 'Could not save the metric value.',
+      errorMessage: 'Не удалось сохранить значение метрики.',
       rethrowOnFailure: true,
     );
   }
@@ -169,7 +169,7 @@ class MetricsController extends ChangeNotifier {
       await _deleteMetric(metric.id);
       await refresh();
     } catch (_) {
-      _errorMessage = 'Could not delete the metric.';
+      _errorMessage = 'Не удалось удалить метрику.';
       rethrow;
     } finally {
       _isSaving = false;
