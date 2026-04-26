@@ -1,3 +1,4 @@
+import '../../../../core/services/local_notifications_service.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/medication.dart';
@@ -38,13 +39,17 @@ class MedsController extends ChangeNotifier {
     required GetMedicationsUseCase getMedications,
     required SaveMedicationUseCase saveMedication,
     required DeleteMedicationUseCase deleteMedication,
+    NotificationScheduler? notificationScheduler,
   }) : _getMedications = getMedications,
        _saveMedication = saveMedication,
-       _deleteMedication = deleteMedication;
+       _deleteMedication = deleteMedication,
+       _notificationScheduler =
+           notificationScheduler ?? LocalNotificationsService.instance;
 
   final GetMedicationsUseCase _getMedications;
   final SaveMedicationUseCase _saveMedication;
   final DeleteMedicationUseCase _deleteMedication;
+  final NotificationScheduler _notificationScheduler;
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -76,6 +81,7 @@ class MedsController extends ChangeNotifier {
           (left, right) =>
               left.timesInMinutes.first.compareTo(right.timesInMinutes.first),
         );
+      await _notificationScheduler.syncMedicationNotifications(_medications);
     } catch (_) {
       _errorMessage = 'Не удалось загрузить препараты.';
     } finally {
@@ -142,6 +148,7 @@ class MedsController extends ChangeNotifier {
 
     try {
       await _deleteMedication(medication.id);
+      await _notificationScheduler.cancelMedicationNotifications(medication.id);
       await refresh();
     } catch (_) {
       _errorMessage = 'Не удалось удалить препарат.';

@@ -1,3 +1,4 @@
+import '../../../../core/services/local_notifications_service.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/medical_visit.dart';
@@ -10,13 +11,17 @@ class VisitsController extends ChangeNotifier {
     required GetMedicalVisitsUseCase getVisits,
     required SaveMedicalVisitUseCase saveVisit,
     required DeleteMedicalVisitUseCase deleteVisit,
+    NotificationScheduler? notificationScheduler,
   }) : _getVisits = getVisits,
        _saveVisit = saveVisit,
-       _deleteVisit = deleteVisit;
+       _deleteVisit = deleteVisit,
+       _notificationScheduler =
+           notificationScheduler ?? LocalNotificationsService.instance;
 
   final GetMedicalVisitsUseCase _getVisits;
   final SaveMedicalVisitUseCase _saveVisit;
   final DeleteMedicalVisitUseCase _deleteVisit;
+  final NotificationScheduler _notificationScheduler;
 
   bool _isLoading = false;
   bool _isSaving = false;
@@ -44,6 +49,7 @@ class VisitsController extends ChangeNotifier {
       final visits = await _getVisits();
       _visits = List<MedicalVisit>.from(visits)
         ..sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
+      await _notificationScheduler.syncVisitNotifications(_visits);
     } catch (_) {
       _errorMessage = 'Не удалось загрузить визиты.';
     } finally {
@@ -128,6 +134,7 @@ class VisitsController extends ChangeNotifier {
 
     try {
       await _deleteVisit(visit.id);
+      await _notificationScheduler.cancelVisitNotification(visit.id);
       await refresh();
     } catch (_) {
       _errorMessage = 'Не удалось удалить визит.';
