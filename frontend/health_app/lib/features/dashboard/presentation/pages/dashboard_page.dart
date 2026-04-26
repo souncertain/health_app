@@ -800,6 +800,7 @@ class _DashboardStatCard extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _DashboardFitnessSyncCard extends StatelessWidget {
   const _DashboardFitnessSyncCard({required this.compact});
 

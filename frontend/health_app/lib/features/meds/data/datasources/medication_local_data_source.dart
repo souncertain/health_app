@@ -18,9 +18,7 @@ class MedicationLocalDataSource {
     final raw = preferences.getString(_storageKey);
 
     if (raw == null || raw.isEmpty) {
-      final seeded = _buildSeedMedications();
-      await saveAll(seeded);
-      return seeded;
+      return const [];
     }
 
     final decoded = jsonDecode(raw) as List<dynamic>;
@@ -85,34 +83,34 @@ class MedicationLocalDataSource {
         switch (id) {
           case 'med-001':
             if (currentName == 'Lisinopril') {
-              json['name'] = 'Лизиноприл';
+              json['name'] = 'Р›РёР·РёРЅРѕРїСЂРёР»';
             }
             if (json['dosage'] == '10mg') {
-              json['dosage'] = '10 мг';
+              json['dosage'] = '10 РјРі';
             }
             break;
           case 'med-002':
             if (currentName == 'Metformin') {
-              json['name'] = 'Метформин';
+              json['name'] = 'РњРµС‚С„РѕСЂРјРёРЅ';
             }
             if (json['dosage'] == '500mg') {
-              json['dosage'] = '500 мг';
+              json['dosage'] = '500 РјРі';
             }
             break;
           case 'med-003':
             if (currentName == 'Atorvastatin') {
-              json['name'] = 'Аторвастатин';
+              json['name'] = 'РђС‚РѕСЂРІР°СЃС‚Р°С‚РёРЅ';
             }
             if (json['dosage'] == '20mg') {
-              json['dosage'] = '20 мг';
+              json['dosage'] = '20 РјРі';
             }
             break;
           case 'med-004':
             if (currentName == 'Aspirin') {
-              json['name'] = 'Аспирин';
+              json['name'] = 'РђСЃРїРёСЂРёРЅ';
             }
             if (json['dosage'] == '100mg') {
-              json['dosage'] = '100 мг';
+              json['dosage'] = '100 РјРі';
             }
             break;
         }
@@ -120,68 +118,5 @@ class MedicationLocalDataSource {
 
       return json;
     }).toList();
-  }
-
-  List<MedicationModel> _buildSeedMedications() {
-    final now = DateTime.now();
-    final weekdays = List<int>.generate(7, (index) => index + 1);
-    final pendingStatuses = {
-      for (final weekday in weekdays) weekday: MedicationDayStatus.pending,
-    };
-
-    return [
-      MedicationModel(
-        id: 'med-001',
-        name: 'Лизиноприл',
-        dosage: '10 мг',
-        frequency: MedicationFrequency.onceDaily,
-        timesInMinutes: const [8 * 60],
-        notificationsEnabled: true,
-        form: MedicationForm.capsule,
-        scheduledWeekdays: weekdays,
-        dayStatuses: Map<int, MedicationDayStatus>.from(pendingStatuses),
-        createdAt: now.subtract(const Duration(days: 12)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-      ),
-      MedicationModel(
-        id: 'med-002',
-        name: 'Метформин',
-        dosage: '500 мг',
-        frequency: MedicationFrequency.twiceDaily,
-        timesInMinutes: const [8 * 60, 20 * 60],
-        notificationsEnabled: true,
-        form: MedicationForm.syringe,
-        scheduledWeekdays: weekdays,
-        dayStatuses: Map<int, MedicationDayStatus>.from(pendingStatuses),
-        createdAt: now.subtract(const Duration(days: 10)),
-        updatedAt: now,
-      ),
-      MedicationModel(
-        id: 'med-003',
-        name: 'Аторвастатин',
-        dosage: '20 мг',
-        frequency: MedicationFrequency.onceDaily,
-        timesInMinutes: const [22 * 60],
-        notificationsEnabled: false,
-        form: MedicationForm.circle,
-        scheduledWeekdays: weekdays,
-        dayStatuses: Map<int, MedicationDayStatus>.from(pendingStatuses),
-        createdAt: now.subtract(const Duration(days: 8)),
-        updatedAt: now.subtract(const Duration(hours: 3)),
-      ),
-      MedicationModel(
-        id: 'med-004',
-        name: 'Аспирин',
-        dosage: '100 мг',
-        frequency: MedicationFrequency.onceDaily,
-        timesInMinutes: const [7 * 60],
-        notificationsEnabled: true,
-        form: MedicationForm.tablet,
-        scheduledWeekdays: weekdays,
-        dayStatuses: Map<int, MedicationDayStatus>.from(pendingStatuses),
-        createdAt: now.subtract(const Duration(days: 5)),
-        updatedAt: now.subtract(const Duration(days: 1)),
-      ),
-    ];
   }
 }

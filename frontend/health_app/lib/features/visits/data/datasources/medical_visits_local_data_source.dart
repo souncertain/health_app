@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../domain/entities/medical_visit.dart';
 import '../models/medical_visit_model.dart';
 
 class MedicalVisitsLocalDataSource {
@@ -17,9 +16,7 @@ class MedicalVisitsLocalDataSource {
     final raw = preferences.getString(_storageKey);
 
     if (raw == null || raw.isEmpty) {
-      final seeded = _buildSeedVisits();
-      await saveAll(seeded);
-      return seeded;
+      return const [];
     }
 
     final decoded = jsonDecode(raw) as List<dynamic>;
@@ -53,59 +50,28 @@ class MedicalVisitsLocalDataSource {
       switch (id) {
         case 'visit-001':
           if (json['doctorName'] == 'Dr. Sarah Mitchell') {
-            json['doctorName'] = 'Д-р Сара Митчелл';
+            json['doctorName'] = 'Р”-СЂ РЎР°СЂР° РњРёС‚С‡РµР»Р»';
           }
           if (json['specialty'] == 'Cardiologist') {
-            json['specialty'] = 'Кардиолог';
+            json['specialty'] = 'РљР°СЂРґРёРѕР»РѕРі';
           }
           if (json['location'] == 'Heart Care Center, Floor 3') {
-            json['location'] = 'Кардиоцентр, этаж 3';
+            json['location'] = 'РљР°СЂРґРёРѕС†РµРЅС‚СЂ, СЌС‚Р°Р¶ 3';
           }
           break;
         case 'visit-002':
           if (json['doctorName'] == 'Dr. Aisha Patel') {
-            json['doctorName'] = 'Д-р Айша Пател';
+            json['doctorName'] = 'Р”-СЂ РђР№С€Р° РџР°С‚РµР»';
           }
           if (json['specialty'] == 'Endocrinologist') {
-            json['specialty'] = 'Эндокринолог';
+            json['specialty'] = 'Р­РЅРґРѕРєСЂРёРЅРѕР»РѕРі';
           }
           if (json['location'] == 'Diabetes & Hormones Clinic') {
-            json['location'] = 'Клиника диабета и гормонов';
+            json['location'] = 'РљР»РёРЅРёРєР° РґРёР°Р±РµС‚Р° Рё РіРѕСЂРјРѕРЅРѕРІ';
           }
           break;
       }
       return json;
     }).toList();
-  }
-
-  List<MedicalVisitModel> _buildSeedVisits() {
-    final today = MedicalVisit.normalizeDate(DateTime.now());
-
-    return [
-      MedicalVisitModel(
-        id: 'visit-001',
-        doctorName: 'Д-р Сара Митчелл',
-        specialty: 'Кардиолог',
-        appointmentDate: today.add(const Duration(days: 4)),
-        timeInMinutes: 10 * 60 + 30,
-        location: 'Кардиоцентр, этаж 3',
-        visitType: MedicalVisitType.oneTime,
-        rating: 4.9,
-        createdAt: today.subtract(const Duration(days: 20)),
-        updatedAt: today,
-      ),
-      MedicalVisitModel(
-        id: 'visit-002',
-        doctorName: 'Д-р Айша Пател',
-        specialty: 'Эндокринолог',
-        appointmentDate: today.add(const Duration(days: 9)),
-        timeInMinutes: 14 * 60,
-        location: 'Клиника диабета и гормонов',
-        visitType: MedicalVisitType.recurring,
-        rating: 4.8,
-        createdAt: today.subtract(const Duration(days: 14)),
-        updatedAt: today,
-      ),
-    ];
   }
 }

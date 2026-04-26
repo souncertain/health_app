@@ -899,6 +899,7 @@ class _VisitActionButton extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _PrescriptionScannerCard extends StatelessWidget {
   const _PrescriptionScannerCard();
 
