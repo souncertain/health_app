@@ -383,7 +383,7 @@ class _DashboardHeroSection extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Доброе утро',
+                        getTimeBasedGreeting(),
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: Colors.white.withValues(alpha: 0.92),
                           fontWeight: FontWeight.w600,
@@ -392,7 +392,7 @@ class _DashboardHeroSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Алекс Джонсон',
+                        'Матвей Фетисов', //TODO Take name from profile with backend
                         style: theme.textTheme.headlineLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -592,6 +592,20 @@ class _DashboardHeroSection extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String getTimeBasedGreeting() {
+    final hour = DateTime.now().hour;
+      
+    if (hour >= 5 && hour < 12) {
+      return 'Доброе утро';
+    } else if (hour >= 12 && hour < 18) {
+      return 'Добрый день';
+    } else if (hour >= 18 && hour < 23) {
+      return 'Добрый вечер';
+    } else {
+      return 'Доброй ночи';
+    }
   }
 }
 

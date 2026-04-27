@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/date_time_labels.dart';
+import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/medication.dart';
 
 Future<void> showMedicationSheet({
@@ -9,29 +11,15 @@ Future<void> showMedicationSheet({
   Medication? initialMedication,
   Future<void> Function()? onDelete,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppModalSheet<void>(
     context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: false,
-    backgroundColor: Colors.white,
-    barrierColor: Colors.black.withValues(alpha: 0.3),
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    heightFactor: 0.94,
+    builder: (_) => MedicationSheet(
+      selectedWeekday: selectedWeekday,
+      initialMedication: initialMedication,
+      onSubmit: onSubmit,
+      onDelete: onDelete,
     ),
-    builder: (context) {
-      return FractionallySizedBox(
-        heightFactor: 0.94,
-        alignment: Alignment.bottomCenter,
-        child: MedicationSheet(
-          selectedWeekday: selectedWeekday,
-          initialMedication: initialMedication,
-          onSubmit: onSubmit,
-          onDelete: onDelete,
-        ),
-      );
-    },
   );
 }
 
@@ -73,30 +61,21 @@ class MedicationSheet extends StatefulWidget {
 
 class _MedicationSheetState extends State<MedicationSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _dosageController;
-  late int _baseTimeInMinutes;
-  late MedicationFrequency _frequency;
-  late bool _notificationsEnabled;
+  late final _nameController = TextEditingController(
+    text: widget.initialMedication?.name ?? '',
+  );
+  late final _dosageController = TextEditingController(
+    text: widget.initialMedication?.dosage ?? '',
+  );
+  late int _baseTimeInMinutes =
+      widget.initialMedication?.timesInMinutes.first ?? -1;
+  late MedicationFrequency _frequency =
+      widget.initialMedication?.frequency ?? MedicationFrequency.onceDaily;
+  late bool _notificationsEnabled =
+      widget.initialMedication?.notificationsEnabled ?? true;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.initialMedication != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(
-      text: widget.initialMedication?.name ?? '',
-    );
-    _dosageController = TextEditingController(
-      text: widget.initialMedication?.dosage ?? '',
-    );
-    _baseTimeInMinutes = widget.initialMedication?.timesInMinutes.first ?? -1;
-    _frequency =
-        widget.initialMedication?.frequency ?? MedicationFrequency.onceDaily;
-    _notificationsEnabled =
-        widget.initialMedication?.notificationsEnabled ?? true;
-  }
 
   @override
   void dispose() {
@@ -112,36 +91,28 @@ class _MedicationSheetState extends State<MedicationSheet> {
             hour: _baseTimeInMinutes ~/ 60,
             minute: _baseTimeInMinutes % 60,
           );
-
     final selected = await showTimePicker(
       context: context,
       initialTime: initialTime,
     );
 
-    if (selected == null) {
-      return;
+    if (selected != null) {
+      setState(() => _baseTimeInMinutes = selected.hour * 60 + selected.minute);
     }
-
-    setState(() {
-      _baseTimeInMinutes = (selected.hour * 60) + selected.minute;
-    });
   }
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-
     if (_baseTimeInMinutes < 0) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Выберите время приема.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Выберите время приема.')),
+      );
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onSubmit(
@@ -165,9 +136,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -177,36 +146,16 @@ class _MedicationSheetState extends State<MedicationSheet> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Удалить препарат?'),
-          content: const Text('Препарат будет удален из локального хранилища.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-              ),
-              child: const Text('Удалить'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await showDeleteConfirmationDialog(
+      context,
+      title: 'Удалить препарат?',
+      message: 'Препарат будет удален из локального хранилища.',
     );
-
-    if (confirmed != true) {
+    if (!confirmed) {
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onDelete!.call();
@@ -221,382 +170,144 @@ class _MedicationSheetState extends State<MedicationSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding =
-        mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom + 24;
-
-    return RepaintBoundary(
-      child: SafeArea(
-        top: false,
-        bottom: false,
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: EdgeInsets.fromLTRB(24, 24, 24, bottomPadding),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _isEditing
-                            ? 'Редактировать препарат'
-                            : 'Новый препарат',
-                        style: const TextStyle(
-                          color: Color(0xFF12203F),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F5FB),
-                      ),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFF7184A2),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 28),
-                _MedicationField(
-                  label: 'Название препарата',
-                  hintText: 'напр. Лизиноприл',
-                  controller: _nameController,
-                ),
-                const SizedBox(height: 20),
-                _MedicationField(
-                  label: 'Дозировка',
-                  hintText: 'напр. 10 мг',
-                  controller: _dosageController,
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Время',
-                  style: const TextStyle(
-                    color: Color(0xFF61738F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: _isSubmitting ? null : _pickTime,
-                  borderRadius: BorderRadius.circular(22),
-                  child: Ink(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 22,
-                      vertical: 20,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF6FCFF),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: const Color(0xFFD7E3F3),
-                        width: 2,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            _baseTimeInMinutes < 0
-                                ? '--:--'
-                                : formatMedicationTime(_baseTimeInMinutes),
-                            style: TextStyle(
-                              color: _baseTimeInMinutes < 0
-                                  ? const Color(0xFF8FA1BC)
-                                  : const Color(0xFF12203F),
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const Icon(
-                          Icons.access_time_rounded,
-                          color: Color(0xFF8FA1BC),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Частота приема',
-                  style: const TextStyle(
-                    color: Color(0xFF61738F),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: MedicationFrequency.values.map((frequency) {
-                    final selected = frequency == _frequency;
-                    return GestureDetector(
+    return AppFormSheet(
+      title: _isEditing ? 'Редактировать препарат' : 'Новый препарат',
+      busy: _isSubmitting,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppTextField(
+              label: 'Название препарата',
+              hintText: 'напр. Лизиноприл',
+              controller: _nameController,
+              accentColor: const Color(0xFF18A8CC),
+              validator: requiredFieldValidator,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Дозировка',
+              hintText: 'напр. 10 мг',
+              controller: _dosageController,
+              accentColor: const Color(0xFF18A8CC),
+              validator: requiredFieldValidator,
+            ),
+            const SizedBox(height: 20),
+            AppPickerField(
+              label: 'Время',
+              text: _baseTimeInMinutes < 0
+                  ? null
+                  : formatMinutesAsClock(_baseTimeInMinutes),
+              placeholder: '--:--',
+              onTap: _isSubmitting ? null : _pickTime,
+              accentColor: const Color(0xFF18A8CC),
+              suffixIcon: const Icon(
+                Icons.access_time_rounded,
+                color: Color(0xFF8FA1BC),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const AppFieldLabel('Частота приема'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: MedicationFrequency.values
+                  .map(
+                    (frequency) => AppChoiceChip(
+                      label: medicationFrequencyLabel(frequency),
+                      selected: frequency == _frequency,
                       onTap: _isSubmitting
                           ? null
-                          : () {
-                              setState(() {
-                                _frequency = frequency;
-                              });
-                            },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 180),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? const Color(0xFF18A8CC)
-                              : const Color(0xFFF1F5FB),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          medicationFrequencyLabel(frequency),
-                          style: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : const Color(0xFF61738F),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 16,
+                          : () => setState(() => _frequency = frequency),
+                      selectedColor: const Color(0xFF18A8CC),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEAF9EF),
+                borderRadius: BorderRadius.circular(22),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFF12A64A),
+                    size: 24,
                   ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF9EF),
-                    borderRadius: BorderRadius.circular(22),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Включить уведомления',
+                      style: TextStyle(
+                        color: Color(0xFF12203F),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.notifications_none_rounded,
-                        color: Color(0xFF12A64A),
-                        size: 24,
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(
-                        child: Text(
-                          'Включить уведомления',
-                          style: TextStyle(
-                            color: Color(0xFF12203F),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      Switch.adaptive(
-                        value: _notificationsEnabled,
-                        onChanged: _isSubmitting
-                            ? null
-                            : (value) {
-                                setState(() {
-                                  _notificationsEnabled = value;
-                                });
-                              },
-                        activeThumbColor: const Color(0xFF1DB954),
-                      ),
-                    ],
+                  Switch.adaptive(
+                    value: _notificationsEnabled,
+                    onChanged: _isSubmitting
+                        ? null
+                        : (value) =>
+                              setState(() => _notificationsEnabled = value),
+                    activeThumbColor: const Color(0xFF1DB954),
                   ),
-                ),
-                const SizedBox(height: 28),
-                if (_isEditing) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isSubmitting ? null : _delete,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFEF4444),
-                            side: const BorderSide(color: Color(0xFFFFD4D4)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                          ),
-                          child: const Text(
-                            'Удалить',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _MedicationSubmitButton(
-                          busy: _isSubmitting,
-                          label: 'Обновить препарат',
-                          onPressed: _submit,
-                        ),
-                      ),
-                    ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 28),
+            if (_isEditing) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: AppBusyOutlinedButton(
+                      busy: _isSubmitting,
+                      label: 'Удалить',
+                      color: const Color(0xFFEF4444),
+                      onPressed: _delete,
+                    ),
                   ),
-                ] else
-                  _MedicationSubmitButton(
-                    busy: _isSubmitting,
-                    label: 'Добавить препарат',
-                    onPressed: _submit,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: AppBusyFilledButton(
+                      busy: _isSubmitting,
+                      label: 'Обновить препарат',
+                      color: const Color(0xFF18A8CC),
+                      disabledColor: const Color(0xFF99D8E7),
+                      onPressed: _submit,
+                    ),
                   ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MedicationField extends StatelessWidget {
-  const _MedicationField({
-    required this.label,
-    required this.hintText,
-    required this.controller,
-  });
-
-  final String label;
-  final String hintText;
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF61738F),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: controller,
-          style: const TextStyle(
-            color: Color(0xFF12203F),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFF8FA1BC),
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-            filled: true,
-            fillColor: const Color(0xFFF6FCFF),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 22,
-              vertical: 20,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFD7E3F3), width: 2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFF18A8CC), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-          ),
-          validator: (value) {
-            final trimmed = value?.trim() ?? '';
-            if (trimmed.isEmpty) {
-              return 'Обязательное поле';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _MedicationSubmitButton extends StatelessWidget {
-  const _MedicationSubmitButton({
-    required this.busy,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final bool busy;
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: busy ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF18A8CC),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF99D8E7),
-          elevation: 10,
-          shadowColor: const Color(0xFF18A8CC).withValues(alpha: 0.25),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 20),
-        ),
-        child: busy
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+                ],
+              ),
+            ] else
+              SizedBox(
+                width: double.infinity,
+                child: AppBusyFilledButton(
+                  busy: _isSubmitting,
+                  label: 'Добавить препарат',
+                  color: const Color(0xFF18A8CC),
+                  disabledColor: const Color(0xFF99D8E7),
+                  onPressed: _submit,
                 ),
               ),
+          ],
+        ),
       ),
     );
   }
@@ -616,8 +327,5 @@ String medicationFrequencyLabel(MedicationFrequency frequency) {
 }
 
 String formatMedicationTime(int totalMinutes) {
-  final hour = totalMinutes ~/ 60;
-  final minute = totalMinutes % 60;
-  final displayHour = hour.toString().padLeft(2, '0');
-  return '$displayHour:${minute.toString().padLeft(2, '0')}';
+  return formatMinutesAsClock(totalMinutes);
 }

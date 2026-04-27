@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout_constants.dart';
+import '../../../../core/utils/date_time_labels.dart';
 import '../../data/datasources/medical_visits_local_data_source.dart';
 import '../../data/repositories/local_medical_visit_repository.dart';
 import '../../domain/entities/medical_visit.dart';
@@ -23,21 +24,6 @@ class VisitsPage extends StatefulWidget {
 class VisitsPageState extends State<VisitsPage> {
   late final VisitsController _controller;
   MedicalVisitType _selectedFilter = MedicalVisitType.oneTime;
-
-  static const _monthNames = [
-    'янв.',
-    'февр.',
-    'мар.',
-    'апр.',
-    'мая',
-    'июн.',
-    'июл.',
-    'авг.',
-    'сент.',
-    'окт.',
-    'нояб.',
-    'дек.',
-  ];
 
   @override
   void initState() {
@@ -172,7 +158,7 @@ class VisitsPageState extends State<VisitsPage> {
                                 : _buildRemainingLabel(nextVisit),
                             nextVisitSubtitle: nextVisit == null
                                 ? 'Добавьте первую запись к врачу'
-                                : '${nextVisit.doctorName} - ${_formatShortDate(nextVisit.appointmentDate)}',
+                                : '${nextVisit.doctorName} - ${formatShortMonthDate(nextVisit.appointmentDate)}',
                             onFilterSelected: (filter) {
                               setState(() {
                                 _selectedFilter = filter;
@@ -205,7 +191,7 @@ class VisitsPageState extends State<VisitsPage> {
                                               dateText: _formatLongDate(
                                                 visit.appointmentDate,
                                               ),
-                                              timeText: _formatTime(
+                                              timeText: formatMinutesAsClock(
                                                 visit.timeInMinutes,
                                               ),
                                               onTap: () =>
@@ -286,20 +272,8 @@ class VisitsPageState extends State<VisitsPage> {
     );
   }
 
-  String _formatShortDate(DateTime date) {
-    return '${date.day} ${_monthNames[date.month - 1]}';
-  }
-
   String _formatLongDate(DateTime date) {
-    return '${date.day} ${_monthNames[date.month - 1]} ${date.year}';
-  }
-
-  String _formatTime(int minutes) {
-    final hour = minutes ~/ 60;
-    final minute = minutes % 60;
-    final displayHour = hour.toString().padLeft(2, '0');
-    final displayMinute = minute.toString().padLeft(2, '0');
-    return '$displayHour:$displayMinute';
+    return formatLongMonthDate(date);
   }
 
   String _buildRemainingLabel(MedicalVisit visit) {

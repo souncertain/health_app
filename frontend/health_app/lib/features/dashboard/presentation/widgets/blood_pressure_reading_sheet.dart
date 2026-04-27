@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/blood_pressure_reading.dart';
 
 Future<void> showBloodPressureReadingSheet({
@@ -8,24 +9,13 @@ Future<void> showBloodPressureReadingSheet({
   BloodPressureReading? initialReading,
   Future<void> Function()? onDelete,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppModalSheet<void>(
     context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: false,
-    backgroundColor: Colors.white,
-    barrierColor: Colors.black.withValues(alpha: 0.3),
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    builder: (_) => BloodPressureReadingSheet(
+      initialReading: initialReading,
+      onSubmit: onSubmit,
+      onDelete: onDelete,
     ),
-    builder: (context) {
-      return BloodPressureReadingSheet(
-        initialReading: initialReading,
-        onSubmit: onSubmit,
-        onDelete: onDelete,
-      );
-    },
   );
 }
 
@@ -60,26 +50,18 @@ class BloodPressureReadingSheet extends StatefulWidget {
 
 class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _systolicController;
-  late final TextEditingController _diastolicController;
-  late final TextEditingController _pulseController;
+  late final _systolicController = TextEditingController(
+    text: widget.initialReading?.systolic.toString() ?? '',
+  );
+  late final _diastolicController = TextEditingController(
+    text: widget.initialReading?.diastolic.toString() ?? '',
+  );
+  late final _pulseController = TextEditingController(
+    text: widget.initialReading?.pulse.toString() ?? '',
+  );
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.initialReading != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _systolicController = TextEditingController(
-      text: widget.initialReading?.systolic.toString() ?? '',
-    );
-    _diastolicController = TextEditingController(
-      text: widget.initialReading?.diastolic.toString() ?? '',
-    );
-    _pulseController = TextEditingController(
-      text: widget.initialReading?.pulse.toString() ?? '',
-    );
-  }
 
   @override
   void dispose() {
@@ -94,9 +76,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onSubmit(
@@ -117,9 +97,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -129,38 +107,16 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       return;
     }
 
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Удалить запись?'),
-          content: const Text(
-            'Это измерение будет удалено из локального хранилища.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Отмена'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-              ),
-              child: const Text('Удалить'),
-            ),
-          ],
-        );
-      },
+    final confirmed = await showDeleteConfirmationDialog(
+      context,
+      title: 'Удалить запись?',
+      message: 'Это измерение будет удалено из локального хранилища.',
     );
-
-    if (confirmed != true) {
+    if (!confirmed) {
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onDelete!.call();
@@ -175,254 +131,87 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding =
-        mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom + 16;
-
-    return RepaintBoundary(
-      child: Padding(
-        padding: EdgeInsets.only(bottom: bottomPadding),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _isEditing
-                            ? 'Редактировать измерение'
-                            : 'Добавить измерение',
-                        style: const TextStyle(
-                          color: Color(0xFF12203F),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+    return AppFormSheet(
+      title: _isEditing ? 'Редактировать измерение' : 'Добавить измерение',
+      busy: _isSubmitting,
+      bottomPaddingExtra: 16,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppTextField(
+              label: 'Верхнее (мм рт. ст.)',
+              hintText: 'напр. 120',
+              controller: _systolicController,
+              accentColor: const Color(0xFF1DB954),
+              keyboardType: TextInputType.number,
+              validator: positiveIntegerValidator,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Нижнее (мм рт. ст.)',
+              hintText: 'напр. 80',
+              controller: _diastolicController,
+              accentColor: const Color(0xFF1DB954),
+              keyboardType: TextInputType.number,
+              validator: positiveIntegerValidator,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Пульс (уд/мин)',
+              hintText: 'напр. 72',
+              controller: _pulseController,
+              accentColor: const Color(0xFF1DB954),
+              keyboardType: TextInputType.number,
+              validator: positiveIntegerValidator,
+            ),
+            const SizedBox(height: 28),
+            if (_isEditing) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: AppBusyOutlinedButton(
+                      busy: _isSubmitting,
+                      label: 'Удалить',
+                      color: const Color(0xFFEF4444),
+                      onPressed: _delete,
                     ),
-                    IconButton(
-                      onPressed: _isSubmitting
-                          ? null
-                          : () => Navigator.of(context).pop(),
-                      style: IconButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F5FB),
-                      ),
-                      icon: const Icon(
-                        Icons.close_rounded,
-                        color: Color(0xFF7184A2),
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: AppBusyFilledButton(
+                      busy: _isSubmitting,
+                      label: 'Обновить запись',
+                      color: const Color(0xFF1DB954),
+                      disabledColor: const Color(0xFF98D7AE),
+                      onPressed: _submit,
                     ),
-                  ],
-                ),
-                const SizedBox(height: 28),
-                _ReadingField(
-                  label: 'Систолическое (мм рт. ст.)',
-                  hintText: 'напр. 120',
-                  controller: _systolicController,
-                ),
-                const SizedBox(height: 20),
-                _ReadingField(
-                  label: 'Диастолическое (мм рт. ст.)',
-                  hintText: 'напр. 80',
-                  controller: _diastolicController,
-                ),
-                const SizedBox(height: 20),
-                _ReadingField(
-                  label: 'Пульс (уд/мин)',
-                  hintText: 'напр. 72',
-                  controller: _pulseController,
-                ),
-                const SizedBox(height: 28),
-                if (_isEditing) ...[
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isSubmitting ? null : _delete,
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFFEF4444),
-                            side: const BorderSide(color: Color(0xFFFFD4D4)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(22),
-                            ),
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                          ),
-                          child: const Text(
-                            'Удалить',
-                            style: TextStyle(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _SaveReadingButton(
-                          busy: _isSubmitting,
-                          label: 'Обновить запись',
-                          onPressed: _submit,
-                        ),
-                      ),
-                    ],
                   ),
-                ] else
-                  _SaveReadingButton(
-                    busy: _isSubmitting,
-                    label: 'Сохранить запись',
-                    onPressed: _submit,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReadingField extends StatelessWidget {
-  const _ReadingField({
-    required this.label,
-    required this.hintText,
-    required this.controller,
-  });
-
-  final String label;
-  final String hintText;
-  final TextEditingController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF61738F),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: const TextStyle(
-            color: Color(0xFF12203F),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFF8FA1BC),
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-            filled: true,
-            fillColor: const Color(0xFFF6FCFF),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 22,
-              vertical: 20,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFD7E3F3), width: 2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFF1DB954), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-          ),
-          validator: (value) {
-            final trimmed = value?.trim() ?? '';
-            if (trimmed.isEmpty) {
-              return 'Обязательное поле';
-            }
-
-            final parsed = int.tryParse(trimmed);
-            if (parsed == null) {
-              return 'Введите число';
-            }
-            if (parsed <= 0) {
-              return 'Значение должно быть больше нуля';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _SaveReadingButton extends StatelessWidget {
-  const _SaveReadingButton({
-    required this.busy,
-    required this.label,
-    required this.onPressed,
-  });
-
-  final bool busy;
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: busy ? null : onPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF1DB954),
-          foregroundColor: Colors.white,
-          disabledBackgroundColor: const Color(0xFF98D7AE),
-          elevation: 10,
-          shadowColor: const Color(0xFF1DB954).withValues(alpha: 0.25),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(22),
-          ),
-          padding: const EdgeInsets.symmetric(vertical: 20),
-        ),
-        child: busy
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w700,
+                ],
+              ),
+            ] else
+              SizedBox(
+                width: double.infinity,
+                child: AppBusyFilledButton(
+                  busy: _isSubmitting,
+                  label: 'Сохранить запись',
+                  color: const Color(0xFF1DB954),
+                  disabledColor: const Color(0xFF98D7AE),
+                  onPressed: _submit,
                 ),
               ),
+          ],
+        ),
       ),
     );
   }

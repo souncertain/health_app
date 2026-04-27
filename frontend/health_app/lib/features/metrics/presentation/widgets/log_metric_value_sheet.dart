@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/date_time_labels.dart';
+import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/health_metric_item.dart';
 import '../metrics_visuals.dart';
 
@@ -8,24 +10,10 @@ Future<void> showLogMetricValueSheet({
   required HealthMetricItem metric,
   required Future<void> Function(LogMetricValueFormValue value) onSubmit,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppModalSheet<void>(
     context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: false,
-    backgroundColor: Colors.white,
-    barrierColor: Colors.black.withValues(alpha: 0.3),
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-    ),
-    builder: (context) {
-      return FractionallySizedBox(
-        heightFactor: 0.86,
-        alignment: Alignment.bottomCenter,
-        child: LogMetricValueSheet(metric: metric, onSubmit: onSubmit),
-      );
-    },
+    heightFactor: 0.86,
+    builder: (_) => LogMetricValueSheet(metric: metric, onSubmit: onSubmit),
   );
 }
 
@@ -55,19 +43,12 @@ class LogMetricValueSheet extends StatefulWidget {
 
 class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _valueController;
-  late DateTime _selectedDate;
+  late final _valueController = TextEditingController();
+  late DateTime _selectedDate = HealthMetricItem.normalizeDate(DateTime.now());
   bool _isSubmitting = false;
 
   bool get _selectedDateHasExistingValue =>
       widget.metric.recordForDate(_selectedDate) != null;
-
-  @override
-  void initState() {
-    super.initState();
-    _valueController = TextEditingController();
-    _selectedDate = HealthMetricItem.normalizeDate(DateTime.now());
-  }
 
   @override
   void dispose() {
@@ -84,13 +65,11 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
       lastDate: DateTime(now.year + 3),
     );
 
-    if (selected == null) {
-      return;
+    if (selected != null) {
+      setState(() {
+        _selectedDate = HealthMetricItem.normalizeDate(selected);
+      });
     }
-
-    setState(() {
-      _selectedDate = HealthMetricItem.normalizeDate(selected);
-    });
   }
 
   Future<void> _submit() async {
@@ -98,9 +77,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onSubmit(
@@ -124,278 +101,127 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding =
-        mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom + 24;
     final visuals = MetricVisualPalette.fromStyle(widget.metric.visualStyle);
 
-    return SafeArea(
-      top: false,
-      bottom: false,
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(24, 24, 24, bottomPadding),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Записать ${widget.metric.title}',
-                      style: const TextStyle(
-                        color: Color(0xFF12203F),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _isSubmitting
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF1F5FB),
-                    ),
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Color(0xFF7184A2),
-                    ),
-                  ),
-                ],
+    return AppFormSheet(
+      title: 'Записать ${widget.metric.title}',
+      busy: _isSubmitting,
+      subtitle: Text(
+        'Нормальный диапазон: '
+        '${_formatMetricNumber(widget.metric.targetMin)}-'
+        '${_formatMetricNumber(widget.metric.targetMax)} ${widget.metric.unit}',
+        style: const TextStyle(
+          color: Color(0xFF8DA2C0),
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 96,
+                height: 96,
+                decoration: BoxDecoration(
+                  color: visuals.iconBackground,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Icon(
+                  visuals.icon,
+                  color: visuals.accentColor,
+                  size: 48,
+                ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                'Нормальный диапазон: '
-                '${_formatMetricNumber(widget.metric.targetMin)}-'
-                '${_formatMetricNumber(widget.metric.targetMax)} ${widget.metric.unit}',
+            ),
+            const SizedBox(height: 28),
+            AppTextField(
+              label: '',
+              hintText: 'Введите ${widget.metric.unit}',
+              controller: _valueController,
+              accentColor: visuals.accentColor,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: visuals.accentColor,
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+              ),
+              hintStyle: TextStyle(
+                color: visuals.accentColor.withValues(alpha: 0.45),
+                fontSize: 28,
+                fontWeight: FontWeight.w800,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 22,
+                vertical: 24,
+              ),
+              borderRadius: 24,
+              validator: (value) => decimalNumberValidator(
+                value,
+                message: 'Введите значение',
+              ),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child: Text(
+                widget.metric.unit,
                 style: const TextStyle(
                   color: Color(0xFF8DA2C0),
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(height: 28),
-              Center(
-                child: Container(
-                  width: 96,
-                  height: 96,
-                  decoration: BoxDecoration(
-                    color: visuals.iconBackground,
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  child: Icon(
-                    visuals.icon,
-                    color: visuals.accentColor,
-                    size: 48,
-                  ),
-                ),
+            ),
+            const SizedBox(height: 22),
+            AppPickerField(
+              label: 'Дата',
+              text: formatLongMonthDate(_selectedDate),
+              placeholder: 'dd.MM.yyyy',
+              onTap: _isSubmitting ? null : _pickDate,
+              accentColor: visuals.accentColor,
+              suffixIcon: const Icon(
+                Icons.calendar_today_rounded,
+                color: Color(0xFF8FA1BC),
+                size: 20,
               ),
-              const SizedBox(height: 28),
-              TextFormField(
-                controller: _valueController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: visuals.accentColor,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Введите ${widget.metric.unit}',
-                  hintStyle: TextStyle(
-                    color: visuals.accentColor.withValues(alpha: 0.45),
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFFF6FCFF),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 24,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFD7E3F3),
-                      width: 2,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide(
-                      color: visuals.accentColor,
-                      width: 2,
-                    ),
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFEF4444),
-                      width: 2,
-                    ),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: const BorderSide(
-                      color: Color(0xFFEF4444),
-                      width: 2,
-                    ),
-                  ),
-                ),
-                validator: (value) {
-                  final trimmed = value?.trim() ?? '';
-                  if (trimmed.isEmpty) {
-                    return 'Введите значение';
-                  }
-                  if (double.tryParse(trimmed.replaceAll(',', '.')) == null) {
-                    return 'Введите число';
-                  }
-                  return null;
-                },
-              ),
+            ),
+            if (_selectedDateHasExistingValue) ...[
               const SizedBox(height: 10),
-              Center(
-                child: Text(
-                  widget.metric.unit,
-                  style: const TextStyle(
-                    color: Color(0xFF8DA2C0),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 22),
-              InkWell(
-                onTap: _isSubmitting ? null : _pickDate,
-                borderRadius: BorderRadius.circular(22),
-                child: Ink(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 18,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6FCFF),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(
-                      color: const Color(0xFFD7E3F3),
-                      width: 2,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        color: visuals.accentColor,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _formatDisplayDate(_selectedDate),
-                          style: const TextStyle(
-                            color: Color(0xFF12203F),
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                      const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF8FA1BC),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              if (_selectedDateHasExistingValue) ...[
-                const SizedBox(height: 10),
-                const Text(
-                  'На эту дату уже есть сохраненное значение. При сохранении оно будет заменено.',
-                  style: TextStyle(
-                    color: Color(0xFF8DA2C0),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: visuals.accentColor,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: visuals.accentColor.withValues(
-                      alpha: 0.5,
-                    ),
-                    elevation: 12,
-                    shadowColor: visuals.accentColor.withValues(alpha: 0.28),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Text(
-                          'Сохранить значение',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+              const Text(
+                'На эту дату уже есть сохраненное значение. При сохранении оно будет заменено.',
+                style: TextStyle(
+                  color: Color(0xFF8DA2C0),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
-          ),
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: AppBusyFilledButton(
+                busy: _isSubmitting,
+                label: 'Сохранить значение',
+                color: visuals.accentColor,
+                onPressed: _submit,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-String _formatDisplayDate(DateTime date) {
-  const monthNames = [
-    '',
-    'янв.',
-    'февр.',
-    'мар.',
-    'апр.',
-    'мая',
-    'июн.',
-    'июл.',
-    'авг.',
-    'сент.',
-    'окт.',
-    'нояб.',
-    'дек.',
-  ];
-  return '${date.day} ${monthNames[date.month]} ${date.year}';
 }
 
 String _formatMetricNumber(double value) {
@@ -403,8 +229,7 @@ String _formatMetricNumber(double value) {
     return value.toStringAsFixed(0);
   }
   final singleDecimal = value.toStringAsFixed(1);
-  if (double.parse(singleDecimal) == value) {
-    return singleDecimal;
-  }
-  return value.toStringAsFixed(2);
+  return double.parse(singleDecimal) == value
+      ? singleDecimal
+      : value.toStringAsFixed(2);
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utils/date_time_labels.dart';
+import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/medical_visit.dart';
 
 Future<void> showAppointmentSheet({
@@ -7,24 +9,13 @@ Future<void> showAppointmentSheet({
   required Future<void> Function(AppointmentFormValue value) onSubmit,
   MedicalVisit? initialVisit,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppModalSheet<void>(
     context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: false,
-    backgroundColor: Colors.white,
-    barrierColor: Colors.black.withValues(alpha: 0.3),
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    heightFactor: 0.94,
+    builder: (_) => AppointmentSheet(
+      initialVisit: initialVisit,
+      onSubmit: onSubmit,
     ),
-    builder: (context) {
-      return FractionallySizedBox(
-        heightFactor: 0.94,
-        alignment: Alignment.bottomCenter,
-        child: AppointmentSheet(initialVisit: initialVisit, onSubmit: onSubmit),
-      );
-    },
   );
 }
 
@@ -62,10 +53,18 @@ class AppointmentSheet extends StatefulWidget {
 
 class _AppointmentSheetState extends State<AppointmentSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _doctorController;
-  late final TextEditingController _specialtyController;
-  late final TextEditingController _locationController;
-  late DateTime _selectedDate;
+  late final _doctorController = TextEditingController(
+    text: widget.initialVisit?.doctorName ?? '',
+  );
+  late final _specialtyController = TextEditingController(
+    text: widget.initialVisit?.specialty ?? '',
+  );
+  late final _locationController = TextEditingController(
+    text: widget.initialVisit?.location ?? '',
+  );
+  late DateTime _selectedDate = MedicalVisit.normalizeDate(
+    widget.initialVisit?.appointmentDate ?? DateTime.now(),
+  );
   int? _selectedTimeInMinutes;
   late MedicalVisitType _visitType;
   bool _isSubmitting = false;
@@ -75,18 +74,6 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
   @override
   void initState() {
     super.initState();
-    _doctorController = TextEditingController(
-      text: widget.initialVisit?.doctorName ?? '',
-    );
-    _specialtyController = TextEditingController(
-      text: widget.initialVisit?.specialty ?? '',
-    );
-    _locationController = TextEditingController(
-      text: widget.initialVisit?.location ?? '',
-    );
-    _selectedDate = MedicalVisit.normalizeDate(
-      widget.initialVisit?.appointmentDate ?? DateTime.now(),
-    );
     _selectedTimeInMinutes = widget.initialVisit?.timeInMinutes;
     _visitType = widget.initialVisit?.visitType ?? MedicalVisitType.oneTime;
   }
@@ -108,13 +95,9 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       lastDate: DateTime(now.year + 5),
     );
 
-    if (selected == null) {
-      return;
+    if (selected != null) {
+      setState(() => _selectedDate = MedicalVisit.normalizeDate(selected));
     }
-
-    setState(() {
-      _selectedDate = MedicalVisit.normalizeDate(selected);
-    });
   }
 
   Future<void> _pickTime() async {
@@ -127,13 +110,11 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       initialTime: initialTime,
     );
 
-    if (selected == null) {
-      return;
+    if (selected != null) {
+      setState(
+        () => _selectedTimeInMinutes = selected.hour * 60 + selected.minute,
+      );
     }
-
-    setState(() {
-      _selectedTimeInMinutes = selected.hour * 60 + selected.minute;
-    });
   }
 
   Future<void> _submit() async {
@@ -141,15 +122,13 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       return;
     }
     if (_selectedTimeInMinutes == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Выберите время приема.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Выберите время приёма.')),
+      );
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onSubmit(
@@ -179,384 +158,134 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding =
-        mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom + 24;
-
-    return SafeArea(
-      top: false,
-      bottom: false,
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(24, 24, 24, bottomPadding),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      _isEditing ? 'Редактировать запись' : 'Новая запись',
-                      style: const TextStyle(
-                        color: Color(0xFF12203F),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: _isSubmitting
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF1F5FB),
-                    ),
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Color(0xFF7184A2),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              _AppointmentField(
-                label: 'Имя врача',
-                hintText: 'напр. Д-р Иван Петров',
-                controller: _doctorController,
-                keyboardType: TextInputType.name,
-              ),
-              const SizedBox(height: 20),
-              _AppointmentField(
-                label: 'Специализация',
-                hintText: 'напр. Кардиолог',
-                controller: _specialtyController,
-                keyboardType: TextInputType.text,
-              ),
-              const SizedBox(height: 20),
-              _PickerField(
-                label: 'Дата',
-                text: _formatDateField(_selectedDate),
-                placeholder: 'dd.MM.yyyy',
-                onTap: _pickDate,
-              ),
-              const SizedBox(height: 20),
-              _PickerField(
-                label: 'Время',
-                text: _selectedTimeInMinutes == null
-                    ? null
-                    : _formatTime(_selectedTimeInMinutes!),
-                placeholder: '--:--',
-                onTap: _pickTime,
-              ),
-              const SizedBox(height: 20),
-              _AppointmentField(
-                label: 'Место',
-                hintText: 'Клиника / медицинский центр',
-                controller: _locationController,
-                keyboardType: TextInputType.streetAddress,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Тип визита',
-                style: TextStyle(
-                  color: Color(0xFF61738F),
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: _VisitTypeOption(
-                      label: 'Разовый',
-                      icon: Icons.calendar_today_rounded,
-                      selected: _visitType == MedicalVisitType.oneTime,
-                      onTap: () {
-                        setState(() {
-                          _visitType = MedicalVisitType.oneTime;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _VisitTypeOption(
-                      label: 'Регулярный',
-                      icon: Icons.sync_rounded,
-                      selected: _visitType == MedicalVisitType.recurring,
-                      onTap: () {
-                        setState(() {
-                          _visitType = MedicalVisitType.recurring;
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF9200),
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: const Color(0xFFF5C16D),
-                    elevation: 10,
-                    shadowColor: const Color(
-                      0xFFEF9200,
-                    ).withValues(alpha: 0.28),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : Text(
-                          _isEditing ? 'Обновить запись' : 'Записаться',
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatDateField(DateTime value) {
-    final day = value.day.toString().padLeft(2, '0');
-    final month = value.month.toString().padLeft(2, '0');
-    return '$day.$month.${value.year}';
-  }
-
-  String _formatTime(int minutes) {
-    final hour = minutes ~/ 60;
-    final minute = minutes % 60;
-    final displayHour = hour.toString().padLeft(2, '0');
-    final displayMinute = minute.toString().padLeft(2, '0');
-    return '$displayHour:$displayMinute';
-  }
-}
-
-class _AppointmentField extends StatelessWidget {
-  const _AppointmentField({
-    required this.label,
-    required this.hintText,
-    required this.controller,
-    required this.keyboardType,
-  });
-
-  final String label;
-  final String hintText;
-  final TextEditingController controller;
-  final TextInputType keyboardType;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF61738F),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: const TextStyle(
-            color: Color(0xFF12203F),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFF8FA1BC),
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
+    return AppFormSheet(
+      title: _isEditing ? 'Редактировать запись' : 'Новая запись',
+      busy: _isSubmitting,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppTextField(
+              label: 'Имя врача',
+              hintText: 'напр. Д-р Иван Петров',
+              controller: _doctorController,
+              accentColor: const Color(0xFFEF9200),
+              validator: requiredFieldValidator,
             ),
-            filled: true,
-            fillColor: const Color(0xFFF6FCFF),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 22,
-              vertical: 20,
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Специализация',
+              hintText: 'напр. Кардиолог',
+              controller: _specialtyController,
+              accentColor: const Color(0xFFEF9200),
+              validator: requiredFieldValidator,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFD7E3F3), width: 2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF9200), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-          ),
-          validator: (value) {
-            if ((value?.trim() ?? '').isEmpty) {
-              return 'Обязательное поле';
-            }
-            return null;
-          },
-        ),
-      ],
-    );
-  }
-}
-
-class _PickerField extends StatelessWidget {
-  const _PickerField({
-    required this.label,
-    required this.placeholder,
-    required this.onTap,
-    this.text,
-  });
-
-  final String label;
-  final String placeholder;
-  final String? text;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF61738F),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        InkWell(
-          borderRadius: BorderRadius.circular(22),
-          onTap: onTap,
-          child: InputDecorator(
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFFF6FCFF),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 22,
-                vertical: 20,
+            const SizedBox(height: 20),
+            AppPickerField(
+              label: 'Дата',
+              text: formatDotDate(_selectedDate),
+              placeholder: 'dd.MM.yyyy',
+              onTap: _isSubmitting ? null : _pickDate,
+              accentColor: const Color(0xFFEF9200),
+              suffixIcon: const Icon(
+                Icons.calendar_today_rounded,
+                color: Color(0xFFD7E3F3),
               ),
+            ),
+            const SizedBox(height: 20),
+            AppPickerField(
+              label: 'Время',
+              text: _selectedTimeInMinutes == null
+                  ? null
+                  : formatMinutesAsClock(_selectedTimeInMinutes!),
+              placeholder: '--:--',
+              onTap: _isSubmitting ? null : _pickTime,
+              accentColor: const Color(0xFFEF9200),
               suffixIcon: const Icon(
                 Icons.schedule_rounded,
                 color: Color(0xFFD7E3F3),
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(
-                  color: Color(0xFFD7E3F3),
-                  width: 2,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(22),
-                borderSide: const BorderSide(
-                  color: Color(0xFFEF9200),
-                  width: 2,
-                ),
-              ),
             ),
-            child: Text(
-              text ?? placeholder,
-              style: TextStyle(
-                color: text == null
-                    ? const Color(0xFF8FA1BC)
-                    : const Color(0xFF12203F),
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Место',
+              hintText: 'Клиника / медицинский центр',
+              controller: _locationController,
+              accentColor: const Color(0xFFEF9200),
+              validator: requiredFieldValidator,
             ),
-          ),
-        ),
-      ],
-    );
-  }
-}
+            const SizedBox(height: 24),
+            const AppFieldLabel('Тип визита'),
+            const SizedBox(height: 14),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 360;
 
-class _VisitTypeOption extends StatelessWidget {
-  const _VisitTypeOption({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
+                Widget buildVisitTypeChip({
+                  required String label,
+                  required IconData icon,
+                  required bool selected,
+                  required VoidCallback onTap,
+                }) {
+                  return Expanded(
+                    child: AppChoiceChip(
+                      label: label,
+                      icon: icon,
+                      selected: selected,
+                      onTap: onTap,
+                      selectedColor: const Color(0xFFEB8600),
+                      unselectedTextColor: const Color(0xFF7C8FAE),
+                      fontSize: isCompact ? 14.5 : 16,
+                      iconSize: isCompact ? 18 : 20,
+                      iconSpacing: isCompact ? 8 : 10,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isCompact ? 12 : 18,
+                        vertical: 16,
+                      ),
+                    ),
+                  );
+                }
 
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFFEB8600) : const Color(0xFFF1F5FB),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 20,
-              color: selected ? Colors.white : const Color(0xFF7C8FAE),
+                return Row(
+                  children: [
+                    buildVisitTypeChip(
+                      label: 'Разовый',
+                      icon: Icons.calendar_today_rounded,
+                      selected: _visitType == MedicalVisitType.oneTime,
+                      onTap: () =>
+                          setState(() => _visitType = MedicalVisitType.oneTime),
+                    ),
+                    SizedBox(width: isCompact ? 10 : 12),
+                    buildVisitTypeChip(
+                      label: 'Регулярный',
+                      icon: Icons.sync_rounded,
+                      selected: _visitType == MedicalVisitType.recurring,
+                      onTap: () => setState(
+                        () => _visitType = MedicalVisitType.recurring,
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF61738F),
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              child: AppBusyFilledButton(
+                busy: _isSubmitting,
+                label: _isEditing ? 'Обновить запись' : 'Записаться',
+                color: const Color(0xFFEF9200),
+                disabledColor: const Color(0xFFF5C16D),
+                onPressed: _submit,
               ),
             ),
           ],

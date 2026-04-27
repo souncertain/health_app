@@ -1,33 +1,21 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/widgets/app_form_sheet.dart';
+
 Future<void> showCustomMetricSheet({
   required BuildContext context,
   required Future<void> Function(CustomMetricFormValue value) onSubmit,
   CustomMetricFormValue? initialValue,
   Future<void> Function()? onDelete,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppModalSheet<void>(
     context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    useSafeArea: false,
-    backgroundColor: Colors.white,
-    barrierColor: Colors.black.withValues(alpha: 0.3),
-    clipBehavior: Clip.antiAlias,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    heightFactor: 0.94,
+    builder: (_) => CustomMetricSheet(
+      onSubmit: onSubmit,
+      initialValue: initialValue,
+      onDelete: onDelete,
     ),
-    builder: (context) {
-      return FractionallySizedBox(
-        heightFactor: 0.94,
-        alignment: Alignment.bottomCenter,
-        child: CustomMetricSheet(
-          onSubmit: onSubmit,
-          initialValue: initialValue,
-          onDelete: onDelete,
-        ),
-      );
-    },
   );
 }
 
@@ -63,36 +51,27 @@ class CustomMetricSheet extends StatefulWidget {
 
 class _CustomMetricSheetState extends State<CustomMetricSheet> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _nameController;
-  late final TextEditingController _unitController;
-  late final TextEditingController _targetMinController;
-  late final TextEditingController _targetMaxController;
+  late final _nameController = TextEditingController(
+    text: widget.initialValue?.name ?? '',
+  );
+  late final _unitController = TextEditingController(
+    text: widget.initialValue?.unit ?? '',
+  );
+  late final _targetMinController = TextEditingController(
+    text: widget.initialValue == null
+        ? ''
+        : _formatDecimal(widget.initialValue!.targetMin),
+  );
+  late final _targetMaxController = TextEditingController(
+    text: widget.initialValue == null
+        ? ''
+        : _formatDecimal(widget.initialValue!.targetMax),
+  );
   bool _isSubmitting = false;
   bool _isDeleting = false;
 
   bool get _isEditing => widget.initialValue != null;
   bool get _isBusy => _isSubmitting || _isDeleting;
-
-  @override
-  void initState() {
-    super.initState();
-    _nameController = TextEditingController(
-      text: widget.initialValue?.name ?? '',
-    );
-    _unitController = TextEditingController(
-      text: widget.initialValue?.unit ?? '',
-    );
-    _targetMinController = TextEditingController(
-      text: widget.initialValue == null
-          ? ''
-          : _formatDecimal(widget.initialValue!.targetMin),
-    );
-    _targetMaxController = TextEditingController(
-      text: widget.initialValue == null
-          ? ''
-          : _formatDecimal(widget.initialValue!.targetMax),
-    );
-  }
 
   @override
   void dispose() {
@@ -114,6 +93,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
     final maxValue = double.parse(
       _targetMaxController.text.trim().replaceAll(',', '.'),
     );
+
     if (minValue >= maxValue) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -123,9 +103,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
       return;
     }
 
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
       await widget.onSubmit(
@@ -153,9 +131,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+        setState(() => _isSubmitting = false);
       }
     }
   }
@@ -166,62 +142,17 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
       return;
     }
 
-    final shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: const Text(
-            'Удалить метрику?',
-            style: TextStyle(
-              color: Color(0xFF12203F),
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          content: const Text(
-            'Метрика и все сохраненные значения будут удалены из локального хранилища.',
-            style: TextStyle(
-              color: Color(0xFF61738F),
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text(
-                'Отмена',
-                style: TextStyle(
-                  color: Color(0xFF7184A2),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFEF4444),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text(
-                'Удалить',
-                style: TextStyle(fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        );
-      },
+    final shouldDelete = await showDeleteConfirmationDialog(
+      context,
+      title: 'Удалить метрику?',
+      message:
+          'Метрика и все сохраненные значения будут удалены из локального хранилища.',
     );
-
-    if (shouldDelete != true) {
+    if (!shouldDelete) {
       return;
     }
 
-    setState(() {
-      _isDeleting = true;
-    });
+    setState(() => _isDeleting = true);
 
     try {
       await onDelete();
@@ -236,268 +167,98 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isDeleting = false;
-        });
+        setState(() => _isDeleting = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final mediaQuery = MediaQuery.of(context);
-    final bottomPadding =
-        mediaQuery.viewInsets.bottom + mediaQuery.padding.bottom + 24;
-
-    return SafeArea(
-      top: false,
-      bottom: false,
-      child: SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.fromLTRB(24, 24, 24, bottomPadding),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    return AppFormSheet(
+      title: _isEditing ? 'Редактировать метрику' : 'Своя метрика',
+      busy: _isBusy,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppTextField(
+              label: 'Название метрики',
+              hintText: 'напр. Мочевая кислота',
+              controller: _nameController,
+              accentColor: const Color(0xFF8B38F6),
+              validator: requiredFieldValidator,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Единица измерения',
+              hintText: 'напр. мг/дл',
+              controller: _unitController,
+              accentColor: const Color(0xFF8B38F6),
+              validator: requiredFieldValidator,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Нижняя граница',
+              hintText: 'напр. 3.5',
+              controller: _targetMinController,
+              accentColor: const Color(0xFF8B38F6),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: decimalNumberValidator,
+            ),
+            const SizedBox(height: 20),
+            AppTextField(
+              label: 'Верхняя граница',
+              hintText: 'напр. 7.2',
+              controller: _targetMaxController,
+              accentColor: const Color(0xFF8B38F6),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              validator: decimalNumberValidator,
+            ),
+            const SizedBox(height: 28),
+            if (_isEditing && widget.onDelete != null) ...[
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      _isEditing ? 'Редактировать метрику' : 'Своя метрика',
-                      style: const TextStyle(
-                        color: Color(0xFF12203F),
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    child: AppBusyOutlinedButton(
+                      busy: _isDeleting,
+                      label: 'Удалить',
+                      color: const Color(0xFFEF4444),
+                      onPressed: _delete,
                     ),
                   ),
-                  IconButton(
-                    onPressed: _isBusy
-                        ? null
-                        : () => Navigator.of(context).pop(),
-                    style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFF1F5FB),
-                    ),
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Color(0xFF7184A2),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    flex: 2,
+                    child: AppBusyFilledButton(
+                      busy: _isSubmitting,
+                      label: 'Обновить метрику',
+                      color: const Color(0xFF8B38F6),
+                      disabledColor: const Color(0xFFC8A7FA),
+                      onPressed: _submit,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
-              _MetricField(
-                label: 'Название метрики',
-                hintText: 'напр. Мочевая кислота',
-                controller: _nameController,
-                keyboardType: TextInputType.name,
-              ),
-              const SizedBox(height: 20),
-              _MetricField(
-                label: 'Единица измерения',
-                hintText: 'напр. мг/дл',
-                controller: _unitController,
-                keyboardType: TextInputType.text,
-              ),
-              const SizedBox(height: 20),
-              _MetricField(
-                label: 'Нижняя граница',
-                hintText: 'напр. 3.5',
-                controller: _targetMinController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+            ] else
+              SizedBox(
+                width: double.infinity,
+                child: AppBusyFilledButton(
+                  busy: _isSubmitting,
+                  label: 'Создать метрику',
+                  color: const Color(0xFF8B38F6),
+                  disabledColor: const Color(0xFFC8A7FA),
+                  onPressed: _submit,
                 ),
-                validator: _decimalValidator,
               ),
-              const SizedBox(height: 20),
-              _MetricField(
-                label: 'Верхняя граница',
-                hintText: 'напр. 7.2',
-                controller: _targetMaxController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                validator: _decimalValidator,
-              ),
-              const SizedBox(height: 28),
-              if (_isEditing && widget.onDelete != null)
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _isBusy ? null : _delete,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFEF4444),
-                          side: BorderSide(
-                            color: const Color(
-                              0xFFEF4444,
-                            ).withValues(alpha: 0.28),
-                            width: 1.5,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(22),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 20),
-                        ),
-                        child: _isDeleting
-                            ? const SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Color(0xFFEF4444),
-                                  ),
-                                ),
-                              )
-                            : const Text(
-                                'Удалить',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(flex: 2, child: _buildSubmitButton()),
-                  ],
-                )
-              else
-                SizedBox(width: double.infinity, child: _buildSubmitButton()),
-            ],
-          ),
+          ],
         ),
       ),
-    );
-  }
-
-  String? _decimalValidator(String? value) {
-    final trimmed = value?.trim() ?? '';
-    if (trimmed.isEmpty) {
-      return 'Обязательное поле';
-    }
-
-    final parsed = double.tryParse(trimmed.replaceAll(',', '.'));
-    if (parsed == null) {
-      return 'Введите число';
-    }
-
-    return null;
-  }
-
-  Widget _buildSubmitButton() {
-    return FilledButton(
-      onPressed: _isBusy ? null : _submit,
-      style: FilledButton.styleFrom(
-        backgroundColor: const Color(0xFF8B38F6),
-        foregroundColor: Colors.white,
-        disabledBackgroundColor: const Color(0xFFC8A7FA),
-        elevation: 10,
-        shadowColor: const Color(0xFF8B38F6).withValues(alpha: 0.25),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-      ),
-      child: _isSubmitting
-          ? const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          : Text(
-              _isEditing ? 'Обновить метрику' : 'Создать метрику',
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
     );
   }
 
   String _formatDecimal(double value) {
     return value % 1 == 0 ? value.toStringAsFixed(0) : value.toString();
-  }
-}
-
-class _MetricField extends StatelessWidget {
-  const _MetricField({
-    required this.label,
-    required this.hintText,
-    required this.controller,
-    required this.keyboardType,
-    this.validator,
-  });
-
-  final String label;
-  final String hintText;
-  final TextEditingController controller;
-  final TextInputType keyboardType;
-  final String? Function(String? value)? validator;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF61738F),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 12),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          style: const TextStyle(
-            color: Color(0xFF12203F),
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-          decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFF8FA1BC),
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-            ),
-            filled: true,
-            fillColor: const Color(0xFFF6FCFF),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 22,
-              vertical: 20,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFD7E3F3), width: 2),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFF8B38F6), width: 2),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-            focusedErrorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(22),
-              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 2),
-            ),
-          ),
-          validator:
-              validator ??
-              (value) {
-                if ((value?.trim() ?? '').isEmpty) {
-                  return 'Обязательное поле';
-                }
-                return null;
-              },
-        ),
-      ],
-    );
   }
 }

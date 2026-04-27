@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout_constants.dart';
+import '../../../../core/utils/date_time_labels.dart';
 import '../../data/datasources/medication_local_data_source.dart';
 import '../../data/repositories/local_medication_repository.dart';
 import '../../domain/entities/medication.dart';
@@ -1097,80 +1098,10 @@ List<_MedsDayData> _buildCurrentWeekDays(DateTime today) {
     return _MedsDayData(
       date: date,
       weekday: index + 1,
-      shortLabel: _weekdayShortLabel(date.weekday),
-      fullLabel: _weekdayFullLabel(date.weekday),
+      shortLabel: shortWeekdayLabel(date.weekday),
+      fullLabel: fullWeekdayLabel(date.weekday),
       dayNumber: date.day,
-      monthDayLabel: '${date.day} ${_monthLabel(date.month)}',
+      monthDayLabel: formatShortMonthDate(date),
     );
   });
-}
-
-String _weekdayShortLabel(int weekday) {
-  switch (weekday) {
-    case DateTime.monday:
-      return 'ПН';
-    case DateTime.tuesday:
-      return 'ВТ';
-    case DateTime.wednesday:
-      return 'СР';
-    case DateTime.thursday:
-      return 'ЧТ';
-    case DateTime.friday:
-      return 'ПТ';
-    case DateTime.saturday:
-      return 'СБ';
-    case DateTime.sunday:
-      return 'ВС';
-  }
-  return '';
-}
-
-String _weekdayFullLabel(int weekday) {
-  switch (weekday) {
-    case DateTime.monday:
-      return 'Понедельник';
-    case DateTime.tuesday:
-      return 'Вторник';
-    case DateTime.wednesday:
-      return 'Среда';
-    case DateTime.thursday:
-      return 'Четверг';
-    case DateTime.friday:
-      return 'Пятница';
-    case DateTime.saturday:
-      return 'Суббота';
-    case DateTime.sunday:
-      return 'Воскресенье';
-  }
-  return '';
-}
-
-String _monthLabel(int month) {
-  switch (month) {
-    case 1:
-      return 'янв.';
-    case 2:
-      return 'февр.';
-    case 3:
-      return 'мар.';
-    case 4:
-      return 'апр.';
-    case 5:
-      return 'мая';
-    case 6:
-      return 'июн.';
-    case 7:
-      return 'июл.';
-    case 8:
-      return 'авг.';
-    case 9:
-      return 'сент.';
-    case 10:
-      return 'окт.';
-    case 11:
-      return 'нояб.';
-    case 12:
-      return 'дек.';
-  }
-  return '';
 }
