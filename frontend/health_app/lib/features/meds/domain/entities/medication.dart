@@ -6,7 +6,7 @@ enum MedicationDayStatus { taken, pending, missed }
 
 enum MedicationSyncState { localOnly, pendingUpload, synced }
 
-class Medication {
+class Medication { // TODO Add DayAfterDay 
   const Medication({
     required this.id,
     required this.name,
