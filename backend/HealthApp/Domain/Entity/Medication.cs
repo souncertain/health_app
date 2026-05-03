@@ -2,7 +2,7 @@ using Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Domain
+namespace Domain.Entity
 {
     [Table("medications")]
     public class Medication
@@ -28,7 +28,7 @@ namespace Domain
         public DateTime LastUpdatedAt { get; set; }
 
         [ForeignKey(nameof(UserId))]
-        [InverseProperty(nameof(Domain.User.Medications))]
+        [InverseProperty(nameof(Entity.User.Medications))]
         public User? User { get; set; }
 
         public bool IsScheduledForWeekday(int weekday)

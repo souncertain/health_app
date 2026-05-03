@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Domain
+namespace Domain.Entity
 {
     [Table("users")]
     public class User
@@ -24,19 +24,19 @@ namespace Domain
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 
-        [InverseProperty(nameof(Domain.Profile.User))]
+        [InverseProperty(nameof(Entity.Profile.User))]
         public Profile? Profile { get; set; }
 
-        [InverseProperty(nameof(Domain.BloodPressure.User))]
+        [InverseProperty(nameof(BloodPressure.User))]
         public ICollection<BloodPressure> BloodPressures { get; set; } = new List<BloodPressure>();
 
-        [InverseProperty(nameof(Domain.Medication.User))]
+        [InverseProperty(nameof(Medication.User))]
         public ICollection<Medication> Medications { get; set; } = new List<Medication>();
 
-        [InverseProperty(nameof(Domain.HealthMetric.User))]
+        [InverseProperty(nameof(HealthMetric.User))]
         public ICollection<HealthMetric> HealthMetrics { get; set; } = new List<HealthMetric>();
 
-        [InverseProperty(nameof(Domain.MedicalVisit.User))]
+        [InverseProperty(nameof(MedicalVisit.User))]
         public ICollection<MedicalVisit> MedicalVisits { get; set; } = new List<MedicalVisit>();
     }
 }

@@ -2,7 +2,7 @@ using Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Domain
+namespace Domain.Entity
 {
     [Table("blood_pressures")]
     public class BloodPressure
@@ -22,7 +22,7 @@ namespace Domain
         public DateTime LastUpdatedAt { get; set; }
 
         [ForeignKey(nameof(UserId))]
-        [InverseProperty(nameof(Domain.User.BloodPressures))]
+        [InverseProperty(nameof(Entity.User.BloodPressures))]
         public User? User { get; set; }
 
         [NotMapped]

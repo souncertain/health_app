@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Domain
+namespace Domain.Entity
 {
     [Table("metric_records")]
     public class MetricRecord
@@ -15,7 +15,7 @@ namespace Domain
         public DateTime LastUpdatedAt { get; set; }
 
         [ForeignKey(nameof(HealthMetricId))]
-        [InverseProperty(nameof(Domain.HealthMetric.Records))]
+        [InverseProperty(nameof(Entity.HealthMetric.Records))]
         public HealthMetric? HealthMetric { get; set; }
     }
 }

@@ -2,7 +2,7 @@ using Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Domain
+namespace Domain.Entity
 {
     [Table("health_metrics")]
     public class HealthMetric
@@ -27,10 +27,10 @@ namespace Domain
         public DateTime LastUpdatedAt { get; set; }
 
         [ForeignKey(nameof(UserId))]
-        [InverseProperty(nameof(Domain.User.HealthMetrics))]
+        [InverseProperty(nameof(Entity.User.HealthMetrics))]
         public User? User { get; set; }
 
-        [InverseProperty(nameof(Domain.MetricRecord.HealthMetric))]
+        [InverseProperty(nameof(MetricRecord.HealthMetric))]
         public ICollection<MetricRecord> Records { get; set; } = new List<MetricRecord>();
     }
 }

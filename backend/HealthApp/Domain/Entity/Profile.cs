@@ -2,7 +2,7 @@ using Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
-namespace Domain
+namespace Domain.Entity
 {
     [Table("profiles")]
     public class Profile
@@ -35,7 +35,7 @@ namespace Domain
         public BloodType BloodType { get; set; }
         public bool ResusPhactor { get; set; }
         [ForeignKey(nameof(UserId))]
-        [InverseProperty(nameof(Domain.User.Profile))]
+        [InverseProperty(nameof(Entity.User.Profile))]
         public User? User { get; set; }
     }
 }
