@@ -1,3 +1,4 @@
+using Data.Interfaces;
 using Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
@@ -5,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Domain.Entity
 {
     [Table("health_metrics")]
-    public class HealthMetric
+    public class HealthMetric : IHasId
     {
         [Key]
         public Guid Id { get; set; }

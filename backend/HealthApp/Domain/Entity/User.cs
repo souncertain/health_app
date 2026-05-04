@@ -1,10 +1,11 @@
+using Data.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Domain.Entity
 {
     [Table("users")]
-    public class User
+    public class User : IHasId
     {
         [Key]
         public Guid Id { get; set; }
@@ -19,8 +20,7 @@ namespace Domain.Entity
         public string Email { get; set; } = string.Empty;
 
         [Required]
-        [MaxLength(255)]
-        public string Password { get; set; } = string.Empty;
+        public byte[] Password { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 

@@ -1,4 +1,4 @@
-namespace HealthApp.Dtos.BloodPressure
+namespace Domain.Dto.BloodPressure
 {
     public class BloodPressureDetailsDto
     {

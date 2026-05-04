@@ -1,10 +1,11 @@
+using Data.Interfaces;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Domain.Entity
 {
     [Table("metric_records")]
-    public class MetricRecord
+    public class MetricRecord : IHasId
     {
         [Key]
         public Guid Id { get; set; }

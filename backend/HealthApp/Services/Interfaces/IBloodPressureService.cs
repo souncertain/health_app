@@ -1,9 +1,9 @@
-﻿using Domain.Entity;
+﻿using Domain.Dto.BloodPressure;
+using Domain.Entity;
 
 namespace Services.Interfaces
 {
-    public interface IBloodPressureService
+    public interface IBloodPressureService : IAbstractService<BloodPressure, BloodPressureCreateDto, BloodPressureDetailsDto>
     {
-        Task<List<BloodPressure>> GetAll(CancellationToken ct);
     }
 }

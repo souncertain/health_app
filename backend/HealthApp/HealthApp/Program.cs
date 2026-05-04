@@ -2,8 +2,9 @@ using Data;
 using Data.Interfaces;
 using Data.Repositpries;
 using Microsoft.EntityFrameworkCore;
-using Services;
 using Services.Interfaces;
+using Services.Mappers;
+using Services.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,8 +18,17 @@ builder.Configuration.AddJsonFile("appsettings.json");
 string connection = builder.Configuration.GetConnectionString("EFPostgres")!;
 builder.Services.AddDbContext<HealthAppDbContext>(options => options.UseNpgsql(connection));
 
+builder.Services.AddAutoMapper(mc =>
+{
+    mc.AddProfile(typeof(BloodPressureMapper));
+    mc.AddProfile(typeof(UserMapper));
+});
+
 builder.Services.AddScoped<IBloodPressureRepository, BloodPressureRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
 builder.Services.AddScoped<IBloodPressureService, BloodPressureService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();

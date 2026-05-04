@@ -1,0 +1,7 @@
+﻿namespace Data.Interfaces
+{
+    public interface IHasId
+    {
+        Guid Id { get; }
+    }
+}

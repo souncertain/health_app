@@ -2,8 +2,7 @@
 
 namespace Data.Interfaces
 {
-    public interface IBloodPressureRepository
+    public interface IBloodPressureRepository : IAbstractRepository<BloodPressure>
     {
-        Task<List<BloodPressure>> GetAll(CancellationToken ct);
     }
 }
