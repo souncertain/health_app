@@ -1,7 +1,7 @@
 ﻿using Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
-namespace Data.Repositpries
+namespace Data.Repositories
 {
     public abstract class AbstractRepository<T> : IAbstractRepository<T> where T : class, IHasId
     {

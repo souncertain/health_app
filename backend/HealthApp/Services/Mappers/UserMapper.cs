@@ -16,7 +16,7 @@ namespace Services.Mappers
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
                 .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow));
 
-            CreateMap<User, UserDetailedDto>()
+            CreateMap<User, UserDetailsDto>()
                 .ForMember(x => x.Id, y => y.MapFrom(source => source.Id))
                 .ForMember(x => x.Email, y => y.MapFrom(source => source.Email))
                 .ForMember(x => x.Phone, y => y.MapFrom(source => source.Phone))

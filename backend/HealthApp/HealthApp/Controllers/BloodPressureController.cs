@@ -6,7 +6,7 @@ using Services.Interfaces;
 namespace HealthApp.Controllers
 {
     [ApiController]
-    [Route("api/pressure")]
+    [Route("api/pressures")]
     public class BloodPressureController : AbstractController<BloodPressure, BloodPressureCreateDto, BloodPressureDetailsDto, IBloodPressureService>
     {
         public BloodPressureController(IBloodPressureService service) : base(service)

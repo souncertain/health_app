@@ -1,6 +1,6 @@
 using Data;
 using Data.Interfaces;
-using Data.Repositpries;
+using Data.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Services.Interfaces;
 using Services.Mappers;
@@ -22,13 +22,29 @@ builder.Services.AddAutoMapper(mc =>
 {
     mc.AddProfile(typeof(BloodPressureMapper));
     mc.AddProfile(typeof(UserMapper));
+    mc.AddProfile(typeof(MedicalVisitMapper));
+    mc.AddProfile(typeof(MedicationMapper));
+    mc.AddProfile(typeof(ProfileMapper));
+    mc.AddProfile(typeof(MetricRecordMapper));
+    mc.AddProfile(typeof(HealthMetricMapper));
 });
 
 builder.Services.AddScoped<IBloodPressureRepository, BloodPressureRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IMedicalVisitRepository, MedicalVisitRepository>();
+builder.Services.AddScoped<IMedicationRepository, MedicationRepository>();
+builder.Services.AddScoped<IProfileRepository, ProfileRepository>();
+builder.Services.AddScoped<IHealthMetricRepository, HealthMetricRepository>();
+builder.Services.AddScoped<IMetricRecordRepository, MetricRecordRepository>();
 
 builder.Services.AddScoped<IBloodPressureService, BloodPressureService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IMedicalVisitService, MedicalVisitService>();
+builder.Services.AddScoped<IMedicationService, MedicationService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<IHealthMetricService, HealthMetricService>();
+builder.Services.AddScoped<IMetricRecordService, MetricRecordService>();
+
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();

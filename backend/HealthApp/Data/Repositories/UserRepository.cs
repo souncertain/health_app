@@ -1,7 +1,7 @@
 ﻿using Data.Interfaces;
 using Domain.Entity;
 
-namespace Data.Repositpries
+namespace Data.Repositories
 {
     public class UserRepository : AbstractRepository<User>, IUserRepository
     {

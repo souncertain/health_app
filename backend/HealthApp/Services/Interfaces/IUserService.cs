@@ -3,7 +3,7 @@ using Domain.Entity;
 
 namespace Services.Interfaces
 {
-    public interface IUserService : IAbstractService<User, UserCreateDto, UserDetailedDto>
+    public interface IUserService : IAbstractService<User, UserCreateDto, UserDetailsDto>
     {
     }
 }

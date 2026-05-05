@@ -1,6 +1,6 @@
 ﻿namespace Domain.Dto.User
 {
-    public class UserDetailedDto
+    public class UserDetailsDto
     {
         public Guid Id { get; set; }
         public string Phone { get; set; }

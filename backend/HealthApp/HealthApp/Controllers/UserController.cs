@@ -6,8 +6,8 @@ using Services.Interfaces;
 namespace HealthApp.Controllers
 {
     [ApiController]
-    [Route("api/user")]
-    public class UserController : AbstractController<User, UserCreateDto, UserDetailedDto, IUserService>
+    [Route("api/users")]
+    public class UserController : AbstractController<User, UserCreateDto, UserDetailsDto, IUserService>
     {
         public UserController(IUserService service) : base(service) { }
     }

@@ -16,10 +16,29 @@ namespace HealthApp.Controllers
         {
             return await _serviceBase.GetAll(ct);
         }
+        
+        [HttpGet("{id}")]
+        public async Task<TFrontendDto> GetById(Guid id, CancellationToken ct)
+        {
+            return await _serviceBase.GetById(id, ct);
+        }
+        
         [HttpPost]
         public async Task<TFrontendDto> Create(TDto dto, CancellationToken ct)
         {
             return await _serviceBase.Create(dto, ct);
+        }
+        
+        [HttpPut]
+        public async Task<TFrontendDto> Update(Guid id, TDto dto, CancellationToken ct)
+        {
+            return await _serviceBase.Update(id, dto, ct);
+        }
+        
+        [HttpDelete]
+        public async Task<bool> Delete(Guid id, CancellationToken ct)
+        {
+            return await _serviceBase.Delete(id, ct);
         }
     }
 }
