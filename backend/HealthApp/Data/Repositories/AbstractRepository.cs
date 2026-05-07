@@ -5,7 +5,7 @@ namespace Data.Repositories
 {
     public abstract class AbstractRepository<T> : IAbstractRepository<T> where T : class, IHasId
     {
-        private readonly HealthAppDbContext _context;
+        protected readonly HealthAppDbContext _context;
         public AbstractRepository(HealthAppDbContext context)
         {
             _context = context;
