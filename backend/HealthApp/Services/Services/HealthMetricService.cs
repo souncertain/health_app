@@ -2,12 +2,28 @@
 using Data.Interfaces;
 using Domain.Dto.HealthMetric;
 using Domain.Entity;
+using Enums;
 using Services.Interfaces;
 
 namespace Services.Services
 {
     public class HealthMetricService : AbstractService<HealthMetric, HealthMetricCreateDto, HealthMetricDetailsDto>, IHealthMetricService
     {
-        public HealthMetricService(IHealthMetricRepository repository, IMapper mapper) : base(repository, mapper) { }
+        private readonly IHealthMetricRepository _healthMetricRepository;
+        public HealthMetricService(IHealthMetricRepository repository, IMapper mapper) : base(repository, mapper) 
+        {
+            _healthMetricRepository = repository;
+        }
+
+        public async Task<HealthMetricDetailsDto> AddRecordToHealthMetric(Guid metricRecordId, Guid metricId)
+        {
+            var metric = await _healthMetricRepository.AddRecordToHealthMetric(metricRecordId, metricId);
+            return _mapper.Map<HealthMetricDetailsDto>(metric);
+        }
+
+        public async Task<MetricTrend> GetMetricTrend(Guid metricId)
+        {
+            return await _healthMetricRepository.GetMetricTrend(metricId);
+        }
     }
 }

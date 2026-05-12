@@ -9,6 +9,14 @@ namespace HealthApp.Controllers
     [Route("api/metricrecord")]
     public class MetricRecordController : AbstractController<MetricRecord, MetricRecordCreateDto, MetricRecordDetailsDto, IMetricRecordService>
     {
-        public MetricRecordController(IMetricRecordService service) : base(service) { }
+        private readonly IMetricRecordService _metricRecordService;
+        public MetricRecordController(IMetricRecordService service) : base(service) 
+        {
+            _metricRecordService = service;
+        }
+        public async Task<IEnumerable<MetricRecordGraphProjection>> GetMetricRecordGraphProjections()
+        {
+            return await _metricRecordService.GetMetricRecordGraphProjections();
+        }
     }
 }

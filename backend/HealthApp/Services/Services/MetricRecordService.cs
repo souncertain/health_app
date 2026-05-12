@@ -8,6 +8,15 @@ namespace Services.Services
 {
     public class MetricRecordService : AbstractService<MetricRecord, MetricRecordCreateDto, MetricRecordDetailsDto>, IMetricRecordService
     {
-        public MetricRecordService(IMetricRecordRepository repository, IMapper mapper) : base(repository, mapper) { }
+        private readonly IMetricRecordRepository _metricRecordRepository;
+        public MetricRecordService(IMetricRecordRepository repository, IMapper mapper) : base(repository, mapper)
+        {
+            _metricRecordRepository = repository;
+        }
+
+        public async Task<IEnumerable<MetricRecordGraphProjection>> GetMetricRecordGraphProjections()
+        {
+            return await _metricRecordRepository.GetMetricRecordGraphProjections();
+        }
     }
 }

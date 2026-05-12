@@ -28,6 +28,7 @@ namespace Services.Mappers
                 .ForMember(x => x.DosageUnit, y => y.MapFrom(source => source.DosageUnit))
                 .ForMember(x => x.Frequency, y => y.MapFrom(source => source.Frequency))
                 .ForMember(x => x.TimesInMinutes, y => y.MapFrom(source => source.TimesInMinutes))
+                //.ForMember(x => x.MedicationStatus, y => y.MapFrom(source => source.DayStatuses[DateTime.UtcNow]))
                 .ForMember(x => x.NotificationsEnabled, y => y.MapFrom(source => source.NotificationsEnabled))
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => source.CreatedAt))
                 .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => source.LastUpdatedAt));

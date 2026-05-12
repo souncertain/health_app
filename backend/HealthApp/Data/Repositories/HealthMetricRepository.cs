@@ -1,7 +1,6 @@
 ﻿using Data.Interfaces;
-using Domain.Dto.HealthMetric;
-using Domain.Dto.MetricRecords;
 using Domain.Entity;
+using Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Data.Repositories
@@ -18,6 +17,34 @@ namespace Data.Repositories
             if (healthMetric is null || metricRecord is null) throw new ArgumentNullException("No health metric or metric record with this id");
             healthMetric.Records.Add(metricRecord);
             return healthMetric;
+        }
+        public async Task<MetricTrend> GetMetricTrend(Guid metricId)
+        {
+            var values = await _context.Set<MetricRecord>()
+                .Where(x => x.Id == metricId)
+                .OrderByDescending(x => x.RecordedOn)
+                .Select(x => x.Value)
+                .Take(2)
+                .ToListAsync();
+
+            if (values.Count < 2)
+            {
+                return MetricTrend.None;
+            }
+
+            var last = values[0];
+            var previous = values[1];
+
+            var delta = last - previous;
+
+            if (Math.Abs(delta) < 0.01)
+            {
+                return MetricTrend.Stable;
+            }
+
+            return delta < 0
+                ? MetricTrend.Down
+                : MetricTrend.Up;
         }
     }
 }

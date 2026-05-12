@@ -24,7 +24,8 @@ namespace Domain.Entity
         public List<int> TimesInMinutes { get; set; } = new List<int>();
         public bool NotificationsEnabled { get; set; }
         public List<int> ScheduledWeekdays { get; set; } = new List<int>();
-        public Dictionary<int, MedicationDayStatus> DayStatuses { get; set; } = new Dictionary<int, MedicationDayStatus>();
+        public Dictionary<int, MedicationDayStatus> DayStatuses { get; set; } = new Dictionary<int, MedicationDayStatus>(); 
+        //Maybe DateTime??
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 
