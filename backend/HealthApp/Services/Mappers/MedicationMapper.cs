@@ -1,4 +1,3 @@
-﻿using Domain.Dto.MedicalVisit;
 using Domain.Dto.Medication;
 using Domain.Entity;
 
@@ -8,7 +7,7 @@ namespace Services.Mappers
     {
         public MedicationMapper()
         {
-           CreateMap<MedicationCreateDto, Medication>()
+            CreateMap<MedicationCreateDto, Medication>()
                 .ForMember(x => x.Id, y => y.MapFrom(source => Guid.NewGuid()))
                 .ForMember(x => x.UserId, y => y.MapFrom(source => source.UserId))
                 .ForMember(x => x.Name, y => y.MapFrom(source => source.Name))
@@ -17,6 +16,7 @@ namespace Services.Mappers
                 .ForMember(x => x.Frequency, y => y.MapFrom(source => source.Frequency))
                 .ForMember(x => x.TimesInMinutes, y => y.MapFrom(source => source.TimesInMinutes))
                 .ForMember(x => x.NotificationsEnabled, y => y.MapFrom(source => source.NotificationsEnabled))
+                .ForMember(x => x.ScheduledWeekdays, y => y.MapFrom(source => source.ScheduledWeekdays))
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
                 .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow));
 
@@ -28,8 +28,8 @@ namespace Services.Mappers
                 .ForMember(x => x.DosageUnit, y => y.MapFrom(source => source.DosageUnit))
                 .ForMember(x => x.Frequency, y => y.MapFrom(source => source.Frequency))
                 .ForMember(x => x.TimesInMinutes, y => y.MapFrom(source => source.TimesInMinutes))
-                //.ForMember(x => x.MedicationStatus, y => y.MapFrom(source => source.DayStatuses[DateTime.UtcNow]))
                 .ForMember(x => x.NotificationsEnabled, y => y.MapFrom(source => source.NotificationsEnabled))
+                .ForMember(x => x.ScheduledWeekdays, y => y.MapFrom(source => source.ScheduledWeekdays))
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => source.CreatedAt))
                 .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => source.LastUpdatedAt));
         }

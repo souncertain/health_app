@@ -6,6 +6,7 @@ import '../../../core/widgets/app_speed_dial.dart';
 import '../../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../../features/meds/presentation/pages/meds_page.dart';
 import '../../../features/metrics/presentation/pages/metrics_page.dart';
+import '../../../features/profile/presentation/pages/profile_page.dart';
 import '../../../features/visits/presentation/pages/visits_page.dart';
 
 class HomeShellPage extends StatefulWidget {
@@ -20,6 +21,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
   final _medsPageKey = GlobalKey<MedsPageState>();
   final _metricsPageKey = GlobalKey<MetricsPageState>();
   final _visitsPageKey = GlobalKey<VisitsPageState>();
+  final _profilePageKey = GlobalKey<ProfilePageState>();
   AppTab _selectedTab = AppTab.dashboard;
   bool _isFabExpanded = false;
 
@@ -28,6 +30,12 @@ class _HomeShellPageState extends State<HomeShellPage> {
       _selectedTab = tab;
       _isFabExpanded = false;
     });
+
+    if (tab == AppTab.profile) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _profilePageKey.currentState?.refreshProfile();
+      });
+    }
   }
 
   void _toggleFab() {
@@ -82,10 +90,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
               MedsPage(key: _medsPageKey),
               MetricsPage(key: _metricsPageKey),
               VisitsPage(key: _visitsPageKey),
-              const _FeaturePlaceholderPage(
-                title: 'Профиль',
-                subtitle: 'Экран профиля подключим следующим.',
-              ),
+              ProfilePage(key: _profilePageKey),
             ],
           ),
           Positioned(
@@ -124,56 +129,6 @@ class _HomeShellPageState extends State<HomeShellPage> {
       bottomNavigationBar: AppBottomNavigation(
         currentTab: _selectedTab,
         onTabSelected: _selectTab,
-      ),
-    );
-  }
-}
-
-class _FeaturePlaceholderPage extends StatelessWidget {
-  const _FeaturePlaceholderPage({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFFEFFBF2), Color(0xFFF8FFFA)],
-        ),
-      ),
-      child: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF0C1C46),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  subtitle,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF6F86A9),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }

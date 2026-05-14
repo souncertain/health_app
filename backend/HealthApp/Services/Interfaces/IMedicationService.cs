@@ -1,9 +1,11 @@
-﻿using Domain.Dto.Medication;
+using Domain.Dto.Medication;
 using Domain.Entity;
 
 namespace Services.Interfaces
 {
     public interface IMedicationService : IAbstractService<Medication, MedicationCreateDto, MedicationDetailsDto>
     {
+        Task<IEnumerable<MedicationSoonestNotificationDto>> GetSoonestNotification();
+        Task<MedicationStatusesDto> GetMedicationStatuses();
     }
 }

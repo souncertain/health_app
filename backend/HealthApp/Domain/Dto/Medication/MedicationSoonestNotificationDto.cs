@@ -2,9 +2,9 @@
 {
     public class MedicationSoonestNotificationDto
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
         public double DosageValue { get; set; }
-        public string DosageUnit { get; set; }
+        public string DosageUnit { get; set; } = string.Empty;
         public TimeOnly SoonestNotificationTime { get; set; }
     }
 }

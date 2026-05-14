@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -20,6 +21,8 @@ abstract class NotificationScheduler {
   Future<void> syncVisitNotifications(Iterable<MedicalVisit> visits);
 
   Future<void> cancelVisitNotification(String visitId);
+
+  Future<void> cancelAllNotifications();
 }
 
 class LocalNotificationsService implements NotificationScheduler {
@@ -31,6 +34,8 @@ class LocalNotificationsService implements NotificationScheduler {
   static const _medicationChannelId = 'medication_reminders';
   static const _visitChannelId = 'visit_reminders';
   static const _maxMedicationSlots = 3;
+  static const _notificationsEnabledStorageKey =
+      'profile.notifications_enabled';
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
@@ -55,6 +60,10 @@ class LocalNotificationsService implements NotificationScheduler {
     Iterable<Medication> medications,
   ) async {
     await _runSafely(() async {
+      if (!await _notificationsEnabled()) {
+        await _plugin.cancelAll();
+        return;
+      }
       for (final medication in medications) {
         try {
           await _syncMedicationNotification(medication);
@@ -75,6 +84,10 @@ class LocalNotificationsService implements NotificationScheduler {
   @override
   Future<void> syncVisitNotifications(Iterable<MedicalVisit> visits) async {
     await _runSafely(() async {
+      if (!await _notificationsEnabled()) {
+        await _plugin.cancelAll();
+        return;
+      }
       for (final visit in visits) {
         try {
           await _syncVisitNotification(visit);
@@ -89,6 +102,13 @@ class LocalNotificationsService implements NotificationScheduler {
   Future<void> cancelVisitNotification(String visitId) async {
     await _runSafely(() async {
       await _cancelVisitNotificationInternal(visitId);
+    });
+  }
+
+  @override
+  Future<void> cancelAllNotifications() async {
+    await _runSafely(() async {
+      await _plugin.cancelAll();
     });
   }
 
@@ -201,6 +221,11 @@ class LocalNotificationsService implements NotificationScheduler {
           MacOSFlutterLocalNotificationsPlugin
         >();
     await macPlugin?.requestPermissions(alert: true, badge: true, sound: true);
+  }
+
+  Future<bool> _notificationsEnabled() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getBool(_notificationsEnabledStorageKey) ?? true;
   }
 
   Future<void> _syncMedicationNotification(Medication medication) async {

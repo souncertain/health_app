@@ -37,6 +37,11 @@ void main() {
 
       expect(find.text('Разовых визитов пока нет'), findsOneWidget);
 
+      await tester.tap(find.text('Профиль').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Мой профиль'), findsOneWidget);
+
       await tester.tap(find.text('Главная').first);
       await tester.pumpAndSettle();
 

@@ -14,6 +14,9 @@ namespace HealthApp.Controllers
         {
             _metricRecordService = service;
         }
+
+        [Route("graph")]
+        [HttpGet]
         public async Task<IEnumerable<MetricRecordGraphProjection>> GetMetricRecordGraphProjections()
         {
             return await _metricRecordService.GetMetricRecordGraphProjections();

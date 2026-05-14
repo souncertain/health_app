@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Domain.Entity
 {
     [Table("medications")]
-    public class Medication :IHasId
+    public class Medication : IHasId
     {
         [Key]
         public Guid Id { get; set; }
@@ -24,8 +24,6 @@ namespace Domain.Entity
         public List<int> TimesInMinutes { get; set; } = new List<int>();
         public bool NotificationsEnabled { get; set; }
         public List<int> ScheduledWeekdays { get; set; } = new List<int>();
-        public Dictionary<int, MedicationDayStatus> DayStatuses { get; set; } = new Dictionary<int, MedicationDayStatus>(); 
-        //Maybe DateTime??
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 
@@ -33,21 +31,22 @@ namespace Domain.Entity
         [InverseProperty(nameof(Entity.User.Medications))]
         public User? User { get; set; }
 
-        public bool IsScheduledForWeekday(int weekday)
+        [InverseProperty(nameof(MedicationDailyStatus.Medication))]
+        public ICollection<MedicationDailyStatus> DailyStatuses { get; set; } = new List<MedicationDailyStatus>();
+
+        public bool IsScheduledForWeekday(int isoWeekday)
         {
-            return ScheduledWeekdays.Contains(weekday);
+            return ScheduledWeekdays.Contains(isoWeekday);
         }
 
-        public MedicationDayStatus? StatusForWeekday(int weekday)
+        public bool IsScheduledForDate(DateOnly date)
         {
-            if (!IsScheduledForWeekday(weekday))
-            {
-                return null;
-            }
+            return IsScheduledForWeekday(ToIsoWeekday(date.DayOfWeek));
+        }
 
-            return DayStatuses.TryGetValue(weekday, out var status)
-                ? status
-                : MedicationDayStatus.Pending;
+        public static int ToIsoWeekday(DayOfWeek dayOfWeek)
+        {
+            return dayOfWeek == DayOfWeek.Sunday ? 7 : (int)dayOfWeek;
         }
     }
 }

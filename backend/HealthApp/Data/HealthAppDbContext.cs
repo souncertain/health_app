@@ -1,6 +1,5 @@
 using Domain.Entity;
 using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace Data
 {
@@ -15,6 +14,7 @@ namespace Data
         public DbSet<HealthMetric> HealthMetrics { get; set; } = null!;
         public DbSet<MedicalVisit> MedicalVisits { get; set; } = null!;
         public DbSet<Medication> Medications { get; set; } = null!;
+        public DbSet<MedicationDailyStatus> MedicationDailyStatuses { get; set; } = null!;
         public DbSet<MetricRecord> MetricRecords { get; set; } = null!;
         public DbSet<Profile> Profiles { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
@@ -31,13 +31,13 @@ namespace Data
                 .Property(x => x.ScheduledWeekdays)
                 .HasColumnType("integer[]");
 
-            modelBuilder.Entity<Medication>()
-                .Property(x => x.DayStatuses)
-                .HasColumnType("jsonb")
-                .HasConversion(
-                    value => JsonSerializer.Serialize(value, (JsonSerializerOptions?)null),
-                    value => JsonSerializer.Deserialize<Dictionary<int, Enums.MedicationDayStatus>>(value, (JsonSerializerOptions?)null)
-                        ?? new Dictionary<int, Enums.MedicationDayStatus>());
+            modelBuilder.Entity<MedicationDailyStatus>()
+                .Property(x => x.Date)
+                .HasColumnType("date");
+
+            modelBuilder.Entity<MedicationDailyStatus>()
+                .HasIndex(x => new { x.MedicationId, x.Date })
+                .IsUnique();
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

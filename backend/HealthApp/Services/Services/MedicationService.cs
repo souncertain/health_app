@@ -1,4 +1,4 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Data.Interfaces;
 using Domain.Dto.Medication;
 using Domain.Entity;
@@ -8,6 +8,21 @@ namespace Services.Services
 {
     public class MedicationService : AbstractService<Medication, MedicationCreateDto, MedicationDetailsDto>, IMedicationService
     {
-        public MedicationService(IMedicationRepository repository, IMapper mapper) : base(repository, mapper) { }
+        private readonly IMedicationRepository _medicationRepository;
+
+        public MedicationService(IMedicationRepository repository, IMapper mapper) : base(repository, mapper)
+        {
+            _medicationRepository = repository;
+        }
+
+        public async Task<IEnumerable<MedicationSoonestNotificationDto>> GetSoonestNotification()
+        {
+            return await _medicationRepository.GetSoonestNotification();
+        }
+
+        public async Task<MedicationStatusesDto> GetMedicationStatuses()
+        {
+            return await _medicationRepository.GetMedicationStatuses();
+        }
     }
 }
