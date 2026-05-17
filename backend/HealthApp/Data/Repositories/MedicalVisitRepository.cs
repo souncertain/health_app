@@ -5,6 +5,7 @@ namespace Data.Repositories
 {
     public class MedicalVisitRepository : AbstractRepository<MedicalVisit>, IMedicalVisitRepository
     {
-        public MedicalVisitRepository(HealthAppDbContext context) : base(context) { }
+        public MedicalVisitRepository(HealthAppDbContext context, ICurrentUserContext currentUserContext)
+            : base(context, currentUserContext) { }
     }
 }

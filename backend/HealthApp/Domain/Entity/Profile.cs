@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Domain.Entity
 {
     [Table("profiles")]
-    public class Profile : IHasId
+    public class Profile : IHasId, IUserOwnedEntity
     {
         [Key]
         public Guid Id { get; set; }
@@ -19,22 +19,34 @@ namespace Domain.Entity
         [MaxLength(100)]
         public string LastName { get; set; } = string.Empty;
         public Guid UserId { get; set; }
-        public DateTime Birthday { get; set; }
+        public DateTime? Birthday { get; set; }
 
-        public Sex Sex { get; set; }
+        public Sex? Sex { get; set; }
 
         [MaxLength(2048)]
         public string AvatarUrl { get; set; } = string.Empty;
 
         [Range(30, 300)]
-        public double Height { get; set; }
+        public double? Height { get; set; }
 
         [Range(1, 700)]
-        public double Weight { get; set; }
+        public double? Weight { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
-        public BloodType BloodType { get; set; }
-        public bool ResusPhactor { get; set; }
+        public BloodType? BloodType { get; set; }
+        public bool? ResusPhactor { get; set; }
+
+        [MaxLength(150)]
+        public string? PrimaryDoctor { get; set; }
+
+        [MaxLength(120)]
+        public string? EmergencyContactName { get; set; }
+
+        [MaxLength(255)]
+        public string? EmergencyContactDetails { get; set; }
+
+        public bool NotificationsEnabled { get; set; } = true;
+
         [ForeignKey(nameof(UserId))]
         [InverseProperty(nameof(Entity.User.Profile))]
         public User? User { get; set; }

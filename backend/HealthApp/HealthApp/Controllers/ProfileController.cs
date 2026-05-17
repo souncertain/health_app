@@ -9,6 +9,29 @@ namespace HealthApp.Controllers
     [Route("api/profile")]
     public class ProfileController : AbstractController<Profile, ProfileCreateDto, ProfileDetailsDto, IProfileService>
     {
-        public ProfileController(IProfileService service) : base (service){ }
+        private readonly IProfileService _profileService;
+
+        public ProfileController(IProfileService service) : base(service)
+        {
+            _profileService = service;
+        }
+
+        [HttpGet("me")]
+        public async Task<ProfilePageDto> GetCurrentProfilePage(CancellationToken ct)
+        {
+            return await _profileService.GetCurrentProfilePage(ct);
+        }
+
+        [HttpGet("me/stats")]
+        public async Task<ProfileStatsDto> GetCurrentProfileStats(CancellationToken ct)
+        {
+            return await _profileService.GetCurrentProfileStats(ct);
+        }
+
+        [HttpPut("me")]
+        public async Task<ProfilePageDto> SaveCurrentProfile([FromBody] ProfilePageUpdateDto dto, CancellationToken ct)
+        {
+            return await _profileService.SaveCurrentProfile(dto, ct);
+        }
     }
 }

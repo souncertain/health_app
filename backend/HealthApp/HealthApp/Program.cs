@@ -1,6 +1,7 @@
 using Data;
 using Data.Interfaces;
 using Data.Repositories;
+using HealthApp.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Services.Interfaces;
 using Services.Mappers;
@@ -17,6 +18,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Configuration.AddJsonFile("appsettings.json");
 string connection = builder.Configuration.GetConnectionString("EFPostgres")!;
 builder.Services.AddDbContext<HealthAppDbContext>(options => options.UseNpgsql(connection));
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 
 builder.Services.AddAutoMapper(mc =>
 {

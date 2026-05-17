@@ -38,6 +38,10 @@ namespace Data
             modelBuilder.Entity<MedicationDailyStatus>()
                 .HasIndex(x => new { x.MedicationId, x.Date })
                 .IsUnique();
+
+            modelBuilder.Entity<Profile>()
+                .Property(x => x.NotificationsEnabled)
+                .HasDefaultValue(true);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

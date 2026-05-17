@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Domain.Entity
 {
     [Table("medications")]
-    public class Medication : IHasId
+    public class Medication : IHasId, IUserOwnedEntity
     {
         [Key]
         public Guid Id { get; set; }

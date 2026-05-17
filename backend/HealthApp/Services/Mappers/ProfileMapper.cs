@@ -1,7 +1,5 @@
 ﻿using Domain.Dto.Profile;
-using Domain.Dto.User;
 using Domain.Entity;
-using System.Text;
 
 namespace Services.Mappers
 {
@@ -16,6 +14,15 @@ namespace Services.Mappers
                 .ForMember(x => x.UserId, y => y.MapFrom(source => source.UserId))
                 .ForMember(x => x.Birthday, y => y.MapFrom(source => source.Birthday))
                 .ForMember(x => x.Sex, y => y.MapFrom(source => source.Sex))
+                .ForMember(x => x.AvatarUrl, y => y.MapFrom(source => source.AvatarUrl ?? string.Empty))
+                .ForMember(x => x.Height, y => y.MapFrom(source => source.Height))
+                .ForMember(x => x.Weight, y => y.MapFrom(source => source.Weight))
+                .ForMember(x => x.BloodType, y => y.MapFrom(source => source.BloodType))
+                .ForMember(x => x.ResusPhactor, y => y.MapFrom(source => source.ResusPhactor))
+                .ForMember(x => x.PrimaryDoctor, y => y.MapFrom(source => source.PrimaryDoctor))
+                .ForMember(x => x.EmergencyContactName, y => y.MapFrom(source => source.EmergencyContactName))
+                .ForMember(x => x.EmergencyContactDetails, y => y.MapFrom(source => source.EmergencyContactDetails))
+                .ForMember(x => x.NotificationsEnabled, y => y.MapFrom(source => source.NotificationsEnabled ?? true))
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
                 .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow))
                 .ForAllMembers(opts =>
@@ -34,6 +41,10 @@ namespace Services.Mappers
                 .ForMember(x => x.Weight, y => y.MapFrom(source => source.Weight))
                 .ForMember(x => x.BloodType, y => y.MapFrom(source => source.BloodType))
                 .ForMember(x => x.ResusPhactor, y => y.MapFrom(source => source.ResusPhactor))
+                .ForMember(x => x.PrimaryDoctor, y => y.MapFrom(source => source.PrimaryDoctor))
+                .ForMember(x => x.EmergencyContactName, y => y.MapFrom(source => source.EmergencyContactName))
+                .ForMember(x => x.EmergencyContactDetails, y => y.MapFrom(source => source.EmergencyContactDetails))
+                .ForMember(x => x.NotificationsEnabled, y => y.MapFrom(source => source.NotificationsEnabled))
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => source.CreatedAt))
                 .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => source.LastUpdatedAt));
         }

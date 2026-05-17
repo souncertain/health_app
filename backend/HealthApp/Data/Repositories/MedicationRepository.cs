@@ -8,7 +8,8 @@ namespace Data.Repositories
 {
     public class MedicationRepository : AbstractRepository<Medication>, IMedicationRepository
     {
-        public MedicationRepository(HealthAppDbContext context) : base(context)
+        public MedicationRepository(HealthAppDbContext context, ICurrentUserContext currentUserContext)
+            : base(context, currentUserContext)
         {
         }
 
@@ -19,8 +20,7 @@ namespace Data.Repositories
             var currentTimeInMinutes = now.Hour * 60 + now.Minute;
             var isoWeekday = Medication.ToIsoWeekday(now.DayOfWeek);
 
-            var medications = await _context.Set<Medication>()
-                .AsNoTracking()
+            var medications = await Query(asNoTracking: true)
                 .Where(x => x.NotificationsEnabled && x.ScheduledWeekdays.Contains(isoWeekday))
                 .Select(x => new
                 {
@@ -56,8 +56,7 @@ namespace Data.Repositories
             var currentTimeInMinutes = now.Hour * 60 + now.Minute;
             var isoWeekday = Medication.ToIsoWeekday(now.DayOfWeek);
 
-            var medications = await _context.Set<Medication>()
-                .AsNoTracking()
+            var medications = await Query(asNoTracking: true)
                 .Where(x => x.ScheduledWeekdays.Contains(isoWeekday))
                 .Select(x => new
                 {
