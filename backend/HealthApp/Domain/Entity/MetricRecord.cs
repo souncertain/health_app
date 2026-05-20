@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Domain.Entity
 {
     [Table("metric_records")]
-    public class MetricRecord : IHasId
+    public class MetricRecord : IHasId, IHasAuditDates
     {
         [Key]
         public Guid Id { get; set; }

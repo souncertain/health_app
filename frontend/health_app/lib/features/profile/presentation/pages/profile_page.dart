@@ -10,9 +10,10 @@ import '../controllers/profile_controller.dart';
 import '../widgets/profile_edit_sheet.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key, this.repository});
+  const ProfilePage({super.key, this.repository, required this.onSignOut});
 
   final ProfileRepository? repository;
+  final Future<void> Function() onSignOut;
 
   @override
   State<ProfilePage> createState() => ProfilePageState();
@@ -20,6 +21,7 @@ class ProfilePage extends StatefulWidget {
 
 class ProfilePageState extends State<ProfilePage> {
   late final ProfileController _controller;
+  bool _isSigningOut = false;
 
   @override
   void initState() {
@@ -49,6 +51,50 @@ class ProfilePageState extends State<ProfilePage> {
       initialProfile: _controller.profile,
       onSubmit: _controller.saveProfile,
     );
+  }
+
+  Future<void> _signOut() async {
+    final shouldSignOut =
+        await showDialog<bool>(
+          context: context,
+          builder: (context) {
+            return AlertDialog(
+              title: const Text('Выйти из аккаунта?'),
+              content: const Text(
+                'Мы завершим текущую сессию и очистим локальные данные этого пользователя на устройстве.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Отмена'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Выйти'),
+                ),
+              ],
+            );
+          },
+        ) ??
+        false;
+
+    if (!shouldSignOut || _isSigningOut) {
+      return;
+    }
+
+    setState(() {
+      _isSigningOut = true;
+    });
+
+    try {
+      await widget.onSignOut();
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSigningOut = false;
+        });
+      }
+    }
   }
 
   @override
@@ -193,6 +239,40 @@ class ProfilePageState extends State<ProfilePage> {
                         ],
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _isSigningOut ? null : _signOut,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFFC0392B),
+                        side: BorderSide(
+                          color: const Color(
+                            0xFFC0392B,
+                          ).withValues(alpha: 0.28),
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        backgroundColor: Colors.white.withValues(alpha: 0.9),
+                      ),
+                      icon: _isSigningOut
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.logout_rounded, size: 20),
+                      label: Text(
+                        _isSigningOut ? 'Выходим...' : 'Выйти из аккаунта',
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Center(

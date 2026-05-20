@@ -5,22 +5,22 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace Domain.Entity
 {
     [Table("users")]
-    public class User : IHasId
+    public class User : IHasId, IHasAuditDates
     {
         [Key]
         public Guid Id { get; set; }
 
-        [Required]
         [MaxLength(20)]
-        public string Phone { get; set; } = string.Empty;
+        public string? Phone { get; set; }
 
         [Required]
         [MaxLength(255)]
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
-        [Required]
-        public byte[] Password { get; set; }
+        [MaxLength(2048)]
+        public string? PasswordHash { get; set; }
+
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
 
@@ -38,5 +38,11 @@ namespace Domain.Entity
 
         [InverseProperty(nameof(MedicalVisit.User))]
         public ICollection<MedicalVisit> MedicalVisits { get; set; } = new List<MedicalVisit>();
+
+        [InverseProperty(nameof(ExternalAuthAccount.User))]
+        public ICollection<ExternalAuthAccount> ExternalAuthAccounts { get; set; } = new List<ExternalAuthAccount>();
+
+        [InverseProperty(nameof(AuthRefreshSession.User))]
+        public ICollection<AuthRefreshSession> AuthRefreshSessions { get; set; } = new List<AuthRefreshSession>();
     }
 }

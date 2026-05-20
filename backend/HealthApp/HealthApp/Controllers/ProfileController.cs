@@ -1,11 +1,13 @@
-﻿using Domain.Dto.Profile;
+using Domain.Dto.Profile;
 using Domain.Entity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
 namespace HealthApp.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/profile")]
     public class ProfileController : AbstractController<Profile, ProfileCreateDto, ProfileDetailsDto, IProfileService>
     {

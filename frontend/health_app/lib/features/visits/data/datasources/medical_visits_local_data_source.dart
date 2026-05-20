@@ -43,6 +43,12 @@ class MedicalVisitsLocalDataSource {
     await preferences.setInt(_storageVersionKey, _currentStorageVersion);
   }
 
+  Future<void> clear() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_storageKey);
+    await preferences.remove(_storageVersionKey);
+  }
+
   List<Map<String, dynamic>> _migrateStoredVisits(List<dynamic> decoded) {
     return decoded.map((item) {
       final json = Map<String, dynamic>.from(item as Map);

@@ -1,15 +1,18 @@
 using Domain.Dto.BloodPressure;
 using Domain.Entity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Services.Interfaces;
 
 namespace HealthApp.Controllers
 {
     [ApiController]
+    [Authorize]
     [Route("api/pressures")]
     public class BloodPressureController : AbstractController<BloodPressure, BloodPressureCreateDto, BloodPressureDetailsDto, IBloodPressureService>
     {
         private readonly IBloodPressureService _bloodPressureService;
+
         public BloodPressureController(IBloodPressureService service) : base(service)
         {
             _bloodPressureService = service;

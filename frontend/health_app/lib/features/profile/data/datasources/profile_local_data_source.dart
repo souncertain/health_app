@@ -45,4 +45,10 @@ class ProfileLocalDataSource {
       profile.notificationsEnabled,
     );
   }
+
+  Future<void> clear() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(profileStorageKey);
+    await preferences.remove(notificationsEnabledStorageKey);
+  }
 }

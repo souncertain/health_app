@@ -18,6 +18,8 @@ namespace Data
         public DbSet<MetricRecord> MetricRecords { get; set; } = null!;
         public DbSet<Profile> Profiles { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
+        public DbSet<AuthRefreshSession> AuthRefreshSessions { get; set; } = null!;
+        public DbSet<ExternalAuthAccount> ExternalAuthAccounts { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -42,6 +44,24 @@ namespace Data
             modelBuilder.Entity<Profile>()
                 .Property(x => x.NotificationsEnabled)
                 .HasDefaultValue(true);
+
+            modelBuilder.Entity<User>()
+                .HasIndex(x => x.Email)
+                .IsUnique();
+
+            modelBuilder.Entity<ExternalAuthAccount>()
+                .HasIndex(x => new { x.Provider, x.ProviderUserId })
+                .IsUnique();
+
+            modelBuilder.Entity<ExternalAuthAccount>()
+                .HasIndex(x => new { x.UserId, x.Provider })
+                .IsUnique();
+
+            modelBuilder.Entity<AuthRefreshSession>()
+                .HasIndex(x => x.UserId);
+
+            modelBuilder.Entity<AuthRefreshSession>()
+                .HasIndex(x => x.ExpiresAt);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -23,6 +23,55 @@ namespace Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entity.AuthRefreshSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeviceId")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RefreshTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("auth_refresh_sessions");
+                });
+
             modelBuilder.Entity("Domain.Entity.BloodPressure", b =>
                 {
                     b.Property<Guid>("Id")
@@ -58,6 +107,48 @@ namespace Data.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("blood_pressures");
+                });
+
+            modelBuilder.Entity("Domain.Entity.ExternalAuthAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderUserId")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Provider", "ProviderUserId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "Provider")
+                        .IsUnique();
+
+                    b.ToTable("external_auth_accounts");
                 });
 
             modelBuilder.Entity("Domain.Entity.HealthMetric", b =>
@@ -346,24 +437,48 @@ namespace Data.Migrations
                     b.Property<DateTime>("LastUpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<byte[]>("Password")
-                        .IsRequired()
-                        .HasColumnType("bytea");
+                    b.Property<string>("PasswordHash")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
 
                     b.Property<string>("Phone")
-                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Email")
+                        .IsUnique();
+
                     b.ToTable("users");
+                });
+
+            modelBuilder.Entity("Domain.Entity.AuthRefreshSession", b =>
+                {
+                    b.HasOne("Domain.Entity.User", "User")
+                        .WithMany("AuthRefreshSessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Domain.Entity.BloodPressure", b =>
                 {
                     b.HasOne("Domain.Entity.User", "User")
                         .WithMany("BloodPressures")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Domain.Entity.ExternalAuthAccount", b =>
+                {
+                    b.HasOne("Domain.Entity.User", "User")
+                        .WithMany("ExternalAuthAccounts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -449,7 +564,11 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.Entity.User", b =>
                 {
+                    b.Navigation("AuthRefreshSessions");
+
                     b.Navigation("BloodPressures");
+
+                    b.Navigation("ExternalAuthAccounts");
 
                     b.Navigation("HealthMetrics");
 

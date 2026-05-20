@@ -10,7 +10,9 @@ import '../../../features/profile/presentation/pages/profile_page.dart';
 import '../../../features/visits/presentation/pages/visits_page.dart';
 
 class HomeShellPage extends StatefulWidget {
-  const HomeShellPage({super.key});
+  const HomeShellPage({super.key, required this.onSignOut});
+
+  final Future<void> Function() onSignOut;
 
   @override
   State<HomeShellPage> createState() => _HomeShellPageState();
@@ -90,7 +92,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
               MedsPage(key: _medsPageKey),
               MetricsPage(key: _metricsPageKey),
               VisitsPage(key: _visitsPageKey),
-              ProfilePage(key: _profilePageKey),
+              ProfilePage(key: _profilePageKey, onSignOut: widget.onSignOut),
             ],
           ),
           Positioned(

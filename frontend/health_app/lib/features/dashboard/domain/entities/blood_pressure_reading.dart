@@ -6,7 +6,7 @@ enum BloodPressureCategory {
   hypertensiveCrisis,
 }
 
-enum BloodPressureSyncState { localOnly, pendingUpload, synced }
+enum BloodPressureSyncState { localOnly, pendingUpload, pendingDelete, synced }
 
 class BloodPressureReading {
   const BloodPressureReading({

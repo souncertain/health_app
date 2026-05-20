@@ -17,8 +17,8 @@ namespace Services.Mappers
                 .ForMember(x => x.UserId, y => y.MapFrom(source => source.UserId))
                 .ForMember(x => x.VisualStyle, y => y.MapFrom(source => source.VisualStyle))
                 .ForMember(x => x.Unit, y => y.MapFrom(source => source.Unit))
-                .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
-                .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow));
+                .ForMember(x => x.CreatedAt, y => y.Ignore())
+                .ForMember(x => x.LastUpdatedAt, y => y.Ignore());
 
             CreateMap<HealthMetric, HealthMetricDetailsDto>()
                 .ForMember(x => x.Id, y => y.MapFrom(source => source.Id))

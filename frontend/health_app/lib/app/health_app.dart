@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'presentation/pages/home_shell_page.dart';
+import '../features/auth/presentation/pages/auth_gate_page.dart';
 
 class HealthApp extends StatelessWidget {
   const HealthApp({super.key});
@@ -30,7 +30,7 @@ class HealthApp extends StatelessWidget {
         ),
         fontFamily: 'SF Pro Display',
       ),
-      home: const HomeShellPage(),
+      home: const AuthGatePage(),
     );
   }
 }

@@ -50,6 +50,34 @@ namespace Data.Repositories
             userOwnedEntity.UserId = _currentUserContext.UserId!.Value;
         }
 
+        private void ApplyAuditDatesOnCreate(T entity)
+        {
+            if (entity is not IHasAuditDates auditEntity)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            if (auditEntity.CreatedAt == default)
+            {
+                auditEntity.CreatedAt = now;
+            }
+
+            auditEntity.LastUpdatedAt = now;
+        }
+
+        private void ApplyAuditDatesOnUpdate(T entity, T existingEntity)
+        {
+            if (entity is not IHasAuditDates incomingAuditEntity ||
+                existingEntity is not IHasAuditDates existingAuditEntity)
+            {
+                return;
+            }
+
+            incomingAuditEntity.CreatedAt = existingAuditEntity.CreatedAt;
+            incomingAuditEntity.LastUpdatedAt = DateTime.UtcNow;
+        }
+
         public async Task<List<T>> GetAll(CancellationToken ct = default)
         {
             return await Query(asNoTracking: true).ToListAsync(ct);
@@ -63,6 +91,7 @@ namespace Data.Repositories
         public Task Create(T entity, CancellationToken ct = default)
         {
             AssignCurrentUserIfOwned(entity);
+            ApplyAuditDatesOnCreate(entity);
             _context.Set<T>().Add(entity);
             return Task.CompletedTask;
         }
@@ -76,6 +105,7 @@ namespace Data.Repositories
             }
 
             AssignCurrentUserIfOwned(entity);
+            ApplyAuditDatesOnUpdate(entity, existingEntity);
             _context.Entry(existingEntity).CurrentValues.SetValues(entity);
         }
 

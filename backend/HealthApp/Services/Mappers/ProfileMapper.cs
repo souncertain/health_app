@@ -23,8 +23,8 @@ namespace Services.Mappers
                 .ForMember(x => x.EmergencyContactName, y => y.MapFrom(source => source.EmergencyContactName))
                 .ForMember(x => x.EmergencyContactDetails, y => y.MapFrom(source => source.EmergencyContactDetails))
                 .ForMember(x => x.NotificationsEnabled, y => y.MapFrom(source => source.NotificationsEnabled ?? true))
-                .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
-                .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow))
+                .ForMember(x => x.CreatedAt, y => y.Ignore())
+                .ForMember(x => x.LastUpdatedAt, y => y.Ignore())
                 .ForAllMembers(opts =>
                     opts.Condition((src, dest, srcMember) => srcMember != null)
                 ); 

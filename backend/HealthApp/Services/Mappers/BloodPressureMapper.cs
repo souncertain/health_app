@@ -28,8 +28,8 @@ namespace Services.Mappers
                 .ForMember(x => x.Pulse, y => y.MapFrom(source => source.Pulse))
                 .ForMember(x => x.RecordedAt, y => y.MapFrom(source => source.RecordedAt))
                 .ForMember(x => x.Source, y => y.MapFrom(source => source.Source))
-                .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
-                .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow));
+                .ForMember(x => x.CreatedAt, y => y.Ignore())
+                .ForMember(x => x.LastUpdatedAt, y => y.Ignore());
         }
     }
 }

@@ -33,4 +33,9 @@ class BloodPressureLocalDataSource {
     );
     await preferences.setString(_storageKey, encoded);
   }
+
+  Future<void> clear() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_storageKey);
+  }
 }

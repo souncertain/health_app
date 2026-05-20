@@ -18,8 +18,8 @@ namespace Services.Mappers
                 .ForMember(x => x.AppointmentDate, y => y.MapFrom(source => source.AppointmentDate))
                 .ForMember(x => x.TimeInMinutes, y => y.MapFrom(source => source.TimeInMinutes))
                 .ForMember(x => x.Location, y => y.MapFrom(source => source.Location))
-                .ForMember(x => x.CreatedAt, y => y.MapFrom(source => DateTime.UtcNow))
-                .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => DateTime.UtcNow));
+                .ForMember(x => x.CreatedAt, y => y.Ignore())
+                .ForMember(x => x.LastUpdatedAt, y => y.Ignore());
 
             CreateMap<MedicalVisit, MedicalVisitDetailsDto>()
                 .ForMember(x => x.Id, y => y.MapFrom(source => source.Id))

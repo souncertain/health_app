@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout_constants.dart';
@@ -27,6 +30,7 @@ class DashboardPage extends StatefulWidget {
 
 class DashboardPageState extends State<DashboardPage> {
   late final DashboardController _controller;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   DashboardHistoryRange _selectedHistoryRange = DashboardHistoryRange.sevenDays;
 
   @override
@@ -41,10 +45,20 @@ class DashboardPageState extends State<DashboardPage> {
       deleteReading: DeleteBloodPressureReadingUseCase(repository),
     );
     _controller.initialize();
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      results,
+    ) {
+      if (results.contains(ConnectivityResult.none)) {
+        return;
+      }
+
+      unawaited(_controller.refresh());
+    });
   }
 
   @override
   void dispose() {
+    _connectivitySubscription?.cancel();
     _controller.dispose();
     super.dispose();
   }
@@ -196,7 +210,7 @@ class DashboardPageState extends State<DashboardPage> {
                             compact: isCompact,
                           ),
                         ),
-                     /*   Padding(  // Commented for an only frontend practice, will be added with backend
+                        /*   Padding(  // Commented for an only frontend practice, will be added with backend
                           padding: EdgeInsets.fromLTRB(
                             horizontalPadding,
                             22,
@@ -596,7 +610,7 @@ class _DashboardHeroSection extends StatelessWidget {
 
   String getTimeBasedGreeting() {
     final hour = DateTime.now().hour;
-      
+
     if (hour >= 5 && hour < 12) {
       return 'Доброе утро';
     } else if (hour >= 12 && hour < 18) {

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../../core/services/local_notifications_service.dart';
 import '../../../dashboard/data/datasources/blood_pressure_local_data_source.dart';
+import '../../../dashboard/domain/entities/blood_pressure_reading.dart';
 import '../../../meds/data/datasources/medication_local_data_source.dart';
 import '../../../metrics/data/datasources/health_metrics_local_data_source.dart';
 import '../../../visits/data/datasources/medical_visits_local_data_source.dart';
@@ -131,7 +132,9 @@ class ProfileController extends ChangeNotifier {
   }
 
   Future<ProfileStats> _buildStats() async {
-    final readings = await _bloodPressureLocalDataSource.getReadings();
+    final readings = (await _bloodPressureLocalDataSource.getReadings())
+        .where((item) => item.syncState != BloodPressureSyncState.pendingDelete)
+        .toList();
     final medications = await _medicationLocalDataSource.getMedications();
     final metrics = await _healthMetricsLocalDataSource.getMetrics();
     final visits = await _medicalVisitsLocalDataSource.getVisits();

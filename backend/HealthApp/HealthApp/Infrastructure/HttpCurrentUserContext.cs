@@ -23,7 +23,8 @@ namespace HealthApp.Infrastructure
                     return null;
                 }
 
-                var claimValue = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier);
+                var claimValue = httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier)
+                    ?? httpContext.User.FindFirstValue("sub");
                 if (Guid.TryParse(claimValue, out var claimUserId))
                 {
                     return claimUserId;

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:health_app/main.dart';
@@ -10,9 +12,33 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  testWidgets('First launch opens sign in page', (tester) async {
+    await tester.pumpWidget(const HealthApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('HealthTrack'), findsOneWidget);
+    expect(find.text('Войти'), findsOneWidget);
+    expect(find.text('Продолжить через Google'), findsOneWidget);
+    expect(find.text('Продолжить через Яндекс'), findsOneWidget);
+  });
+
   testWidgets(
-    'New install starts empty and quick actions still open creation flows',
+    'Saved session opens app and quick actions still open creation flows',
     (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'auth.session': jsonEncode({
+          'userId': 'tester@example.com',
+          'displayName': 'Tester',
+          'email': 'tester@example.com',
+          'provider': 'password',
+          'accessToken': 'access-token',
+          'refreshToken': 'refresh-token',
+          'issuedAt': DateTime(2026, 5, 18).toIso8601String(),
+          'accessTokenExpiresAt': DateTime(2026, 5, 19).toIso8601String(),
+          'refreshSessionId': 'refresh-session',
+        }),
+      });
+
       await tester.pumpWidget(const HealthApp());
       await tester.pumpAndSettle();
 
