@@ -23,6 +23,58 @@ namespace Data.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entity.AuthOneTimeCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FailedAttemptCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("InvalidatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MaxAllowedAttempts")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Purpose")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email", "Purpose");
+
+                    b.HasIndex("UserId", "Purpose", "ExpiresAt");
+
+                    b.ToTable("auth_one_time_codes");
+                });
+
             modelBuilder.Entity("Domain.Entity.AuthRefreshSession", b =>
                 {
                     b.Property<Guid>("Id")
@@ -453,6 +505,17 @@ namespace Data.Migrations
                     b.ToTable("users");
                 });
 
+            modelBuilder.Entity("Domain.Entity.AuthOneTimeCode", b =>
+                {
+                    b.HasOne("Domain.Entity.User", "User")
+                        .WithMany("AuthOneTimeCodes")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Domain.Entity.AuthRefreshSession", b =>
                 {
                     b.HasOne("Domain.Entity.User", "User")
@@ -564,6 +627,8 @@ namespace Data.Migrations
 
             modelBuilder.Entity("Domain.Entity.User", b =>
                 {
+                    b.Navigation("AuthOneTimeCodes");
+
                     b.Navigation("AuthRefreshSessions");
 
                     b.Navigation("BloodPressures");

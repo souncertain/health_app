@@ -20,12 +20,16 @@ class MetricRecordModel extends MetricRecord {
   }
 
   factory MetricRecordModel.fromJson(Map<String, dynamic> json) {
+    final parsedRecordedOn = DateTime.parse(json['recordedOn'] as String);
+    final normalizedRecordedOn = parsedRecordedOn.isUtc
+        ? parsedRecordedOn.toLocal()
+        : parsedRecordedOn;
     return MetricRecordModel(
       id: json['id'] as String,
       value: (json['value'] as num).toDouble(),
-      recordedOn: DateTime.parse(json['recordedOn'] as String),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      recordedOn: HealthMetricItem.normalizeDate(normalizedRecordedOn),
+      createdAt: _parseTimestamp(json['createdAt'] as String),
+      updatedAt: _parseTimestamp(json['updatedAt'] as String),
     );
   }
 
@@ -88,8 +92,8 @@ class HealthMetricModel extends HealthMetricItem {
             (item) => MetricRecordModel.fromJson(item as Map<String, dynamic>),
           )
           .toList(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: _parseTimestamp(json['createdAt'] as String),
+      updatedAt: _parseTimestamp(json['updatedAt'] as String),
       isCustom: json['isCustom'] as bool? ?? false,
       remoteId: json['remoteId'] as String?,
       syncState: MetricSyncState.values.firstWhere(
@@ -117,4 +121,9 @@ class HealthMetricModel extends HealthMetricItem {
       'syncState': syncState.name,
     };
   }
+}
+
+DateTime _parseTimestamp(String raw) {
+  final parsed = DateTime.parse(raw);
+  return parsed.isUtc ? parsed.toLocal() : parsed;
 }

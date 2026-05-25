@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../core/layout/app_layout_constants.dart';
 import '../../../../core/utils/date_time_labels.dart';
 import '../../data/datasources/medication_local_data_source.dart';
-import '../../data/repositories/local_medication_repository.dart';
+import '../../data/datasources/medication_remote_data_source.dart';
+import '../../data/repositories/backend_medication_repository.dart';
 import '../../domain/entities/medication.dart';
 import '../../domain/repositories/medication_repository.dart';
 import '../../domain/usecases/delete_medication.dart';
+import '../../domain/usecases/get_cached_medications.dart';
 import '../../domain/usecases/get_medications.dart';
 import '../../domain/usecases/save_medication.dart';
+import '../../domain/usecases/set_medication_daily_status.dart';
 import '../controllers/meds_controller.dart';
 import '../widgets/medication_sheet.dart';
 
@@ -34,10 +37,15 @@ class MedsPageState extends State<MedsPage> {
     super.initState();
     final repository =
         widget.repository ??
-        LocalMedicationRepository(MedicationLocalDataSource());
+        BackendMedicationRepository(
+          localDataSource: MedicationLocalDataSource(),
+          remoteDataSource: MedicationRemoteDataSource(),
+        );
     _controller = MedsController(
+      getCachedMedications: GetCachedMedicationsUseCase(repository),
       getMedications: GetMedicationsUseCase(repository),
       saveMedication: SaveMedicationUseCase(repository),
+      setMedicationDailyStatus: SetMedicationDailyStatusUseCase(repository),
       deleteMedication: DeleteMedicationUseCase(repository),
     );
     _days = _buildCurrentWeekDays(DateTime.now());
@@ -55,14 +63,32 @@ class MedsPageState extends State<MedsPage> {
     return showMedicationSheet(
       context: context,
       selectedWeekday: _selectedWeekday,
-      onSubmit: (value) {
-        return _controller.saveMedication(
+      onSubmit: (value) async {
+        final deferredStart = _buildDeferredStartPreview(
+          value: value,
+          createdAt: DateTime.now(),
+        );
+
+        await _controller.saveMedication(
           name: value.name,
           dosage: value.dosage,
-          baseTimeInMinutes: value.baseTimeInMinutes,
+          timesInMinutes: value.timesInMinutes,
           frequency: value.frequency,
           notificationsEnabled: value.notificationsEnabled,
           selectedWeekday: value.selectedWeekday,
+        );
+
+        if (!mounted || deferredStart == null) {
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Сегодняшние времена уже прошли. '
+              'Карточка препарата появится ${_formatDeferredStart(deferredStart)}.',
+            ),
+          ),
         );
       },
     );
@@ -78,7 +104,7 @@ class MedsPageState extends State<MedsPage> {
           existingMedication: medication,
           name: value.name,
           dosage: value.dosage,
-          baseTimeInMinutes: value.baseTimeInMinutes,
+          timesInMinutes: value.timesInMinutes,
           frequency: value.frequency,
           notificationsEnabled: value.notificationsEnabled,
           selectedWeekday: value.selectedWeekday,
@@ -156,41 +182,45 @@ class MedsPageState extends State<MedsPage> {
                               child: visibleMedications.isEmpty
                                   ? const _NoMedsForDayState()
                                   : Column(
-                                      children: visibleMedications
-                                          .map(
-                                            (medication) => Padding(
-                                              padding: const EdgeInsets.only(
-                                                bottom: 18,
-                                              ),
-                                              child: _MedicationCard(
-                                                medication: medication,
-                                                status:
-                                                    _controller.statusForDate(
-                                                      medication,
-                                                      _selectedDate,
-                                                    ) ??
-                                                    MedicationDayStatus.pending,
-                                                compact: isCompact,
-                                                onTap: () =>
-                                                    _openEditMedicationSheet(
-                                                      medication,
-                                                    ),
-                                                onNotificationTap: () {
-                                                  _controller
-                                                      .toggleNotifications(
-                                                        medication,
-                                                      );
-                                                },
-                                                onStatusTap: () {
-                                                  _controller.toggleTakenStatus(
+                                      children: [
+                                        ...visibleMedications.map(
+                                          (medication) => Padding(
+                                            padding: const EdgeInsets.only(
+                                              bottom: 18,
+                                            ),
+                                            child: _MedicationCard(
+                                              medication: medication,
+                                              displayTimes: _controller
+                                                  .timesForDate(
                                                     medication,
                                                     _selectedDate,
-                                                  );
-                                                },
-                                              ),
+                                                  ),
+                                              status:
+                                                  _controller.statusForDate(
+                                                    medication,
+                                                    _selectedDate,
+                                                  ) ??
+                                                  MedicationDayStatus.pending,
+                                              compact: isCompact,
+                                              onTap: () =>
+                                                  _openEditMedicationSheet(
+                                                    medication,
+                                                  ),
+                                              onNotificationTap: () {
+                                                _controller.toggleNotifications(
+                                                  medication,
+                                                );
+                                              },
+                                              onStatusTap: () {
+                                                _controller.toggleTakenStatus(
+                                                  medication,
+                                                  _selectedDate,
+                                                );
+                                              },
                                             ),
-                                          )
-                                          .toList(),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                             ),
                             Padding(
@@ -328,6 +358,57 @@ class MedsPageState extends State<MedsPage> {
       ),
     );
   }
+
+  DateTime? _buildDeferredStartPreview({
+    required MedicationFormValue value,
+    required DateTime createdAt,
+  }) {
+    final scheduledWeekdays = value.frequency == MedicationFrequency.weekly
+        ? [value.selectedWeekday]
+        : List<int>.generate(7, (index) => index + 1);
+
+    final draftMedication = Medication(
+      id: 'preview',
+      name: value.name,
+      dosage: value.dosage,
+      frequency: value.frequency,
+      timesInMinutes: List<int>.from(value.timesInMinutes)..sort(),
+      notificationsEnabled: value.notificationsEnabled,
+      form: MedicationForm.tablet,
+      scheduledWeekdays: scheduledWeekdays,
+      dayStatuses: const {},
+      createdAt: createdAt,
+      updatedAt: createdAt,
+    );
+
+    if (!draftMedication.wasCreatedAfterAllTimesForDate(createdAt)) {
+      return null;
+    }
+
+    return draftMedication.nextReminderAt(after: createdAt);
+  }
+
+  String _formatDeferredStart(DateTime deferredStart) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final deferredDay = DateTime(
+      deferredStart.year,
+      deferredStart.month,
+      deferredStart.day,
+    );
+    final isTomorrow = deferredDay.difference(today).inDays == 1;
+
+    final timeLabel = formatMinutesAsClock(
+      (deferredStart.hour * 60) + deferredStart.minute,
+    );
+
+    if (isTomorrow) {
+      return 'завтра в $timeLabel';
+    }
+
+    return '${shortWeekdayLabel(deferredStart.weekday)}, '
+        '${formatShortMonthDate(deferredStart)} в $timeLabel';
+  }
 }
 
 class _MedsHeader extends StatelessWidget {
@@ -432,16 +513,15 @@ class _MedsHeader extends StatelessWidget {
                           ),
                         ),
                       ),
-                      Text(
-                        totalCount == 0
-                            ? '0/0 принято'
-                            : '$takenCount/$totalCount принято',
-                        style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.82),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                      if (totalCount > 0)
+                        Text(
+                          '$takenCount/$totalCount принято',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.82),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -533,6 +613,7 @@ class _MedsHeader extends StatelessWidget {
 class _MedicationCard extends StatelessWidget {
   const _MedicationCard({
     required this.medication,
+    required this.displayTimes,
     required this.status,
     required this.compact,
     required this.onTap,
@@ -541,6 +622,7 @@ class _MedicationCard extends StatelessWidget {
   });
 
   final Medication medication;
+  final List<int> displayTimes;
   final MedicationDayStatus status;
   final bool compact;
   final VoidCallback onTap;
@@ -648,7 +730,7 @@ class _MedicationCard extends StatelessWidget {
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: medication.timesInMinutes
+                      children: displayTimes
                           .map(
                             (time) => Container(
                               padding: const EdgeInsets.symmetric(
@@ -864,6 +946,17 @@ class _UpcomingReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final isToday =
+        reminder.scheduledAt.year == now.year &&
+        reminder.scheduledAt.month == now.month &&
+        reminder.scheduledAt.day == now.day;
+    final scheduleLabel = isToday
+        ? formatMedicationTime(reminder.timeInMinutes)
+        : '${shortWeekdayLabel(reminder.scheduledAt.weekday)}, '
+            '${formatShortMonthDate(reminder.scheduledAt)} · '
+            '${formatMedicationTime(reminder.timeInMinutes)}';
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
       decoration: BoxDecoration(
@@ -917,12 +1010,103 @@ class _UpcomingReminderCard extends StatelessWidget {
               ],
             ),
           ),
-          Text(
-            formatMedicationTime(reminder.timeInMinutes),
-            style: const TextStyle(
-              color: Color(0xFF11A648),
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
+          Flexible(
+            child: Text(
+              scheduleLabel,
+              textAlign: TextAlign.right,
+              style: const TextStyle(
+                color: Color(0xFF11A648),
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
+class _DeferredMedicationInfoCard extends StatelessWidget {
+  const _DeferredMedicationInfoCard({required this.deferredStarts});
+
+  final List<MedicationDeferredStartPreview> deferredStarts;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8E1),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFFE08A)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: Color(0xFFF59E0B),
+                size: 22,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Некоторые препараты появятся только со следующего окна приема.',
+                  style: TextStyle(
+                    color: Color(0xFF8A5A00),
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ...deferredStarts.map(
+            (preview) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 7),
+                    child: Icon(
+                      Icons.circle,
+                      size: 8,
+                      color: Color(0xFFF59E0B),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${preview.name} · ${preview.dosage}',
+                      style: const TextStyle(
+                        color: Color(0xFF6C4A00),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    '${shortWeekdayLabel(preview.startsAt.weekday)}, '
+                    '${formatShortMonthDate(preview.startsAt)} · '
+                    '${formatMinutesAsClock((preview.startsAt.hour * 60) + preview.startsAt.minute)}',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      color: Color(0xFF8A5A00),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

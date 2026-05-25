@@ -18,13 +18,22 @@ Future<T?> showAppModalSheet<T>({
     ),
     builder: (context) {
       final child = builder(context);
-      return heightFactor == null
+      final content = heightFactor == null
           ? child
           : FractionallySizedBox(
               heightFactor: heightFactor,
               alignment: Alignment.bottomCenter,
               child: child,
             );
+
+      return AnimatedPadding(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.viewInsetsOf(context).bottom,
+        ),
+        child: content,
+      );
     },
   );
 }
@@ -50,16 +59,14 @@ class AppFormSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mediaQuery = MediaQuery.of(context);
-    final bottomPadding =
-        mediaQuery.viewInsets.bottom +
-        mediaQuery.padding.bottom +
-        bottomPaddingExtra;
+    final bottomPadding = mediaQuery.padding.bottom + bottomPaddingExtra;
 
     return SafeArea(
       top: false,
       bottom: false,
       child: SingleChildScrollView(
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        physics: const ClampingScrollPhysics(),
         padding: EdgeInsets.fromLTRB(24, 24, 24, bottomPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,6 +137,7 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.keyboardType,
     this.readOnly = false,
+    this.obscureText = false,
     this.onTap,
     this.textAlign = TextAlign.start,
     this.suffixIcon,
@@ -137,6 +145,7 @@ class AppTextField extends StatelessWidget {
     this.hintStyle,
     this.contentPadding,
     this.borderRadius = 22,
+    this.scrollPadding = const EdgeInsets.fromLTRB(20, 20, 20, 180),
   });
 
   final String label;
@@ -146,6 +155,7 @@ class AppTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
   final bool readOnly;
+  final bool obscureText;
   final VoidCallback? onTap;
   final TextAlign textAlign;
   final Widget? suffixIcon;
@@ -153,6 +163,7 @@ class AppTextField extends StatelessWidget {
   final TextStyle? hintStyle;
   final EdgeInsetsGeometry? contentPadding;
   final double borderRadius;
+  final EdgeInsets scrollPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -167,8 +178,10 @@ class AppTextField extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           readOnly: readOnly,
+          obscureText: obscureText,
           onTap: onTap,
           textAlign: textAlign,
+          scrollPadding: scrollPadding,
           style:
               style ??
               const TextStyle(

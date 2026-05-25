@@ -78,17 +78,17 @@ namespace Data.Repositories
             incomingAuditEntity.LastUpdatedAt = DateTime.UtcNow;
         }
 
-        public async Task<List<T>> GetAll(CancellationToken ct = default)
+        public virtual async Task<List<T>> GetAll(CancellationToken ct = default)
         {
             return await Query(asNoTracking: true).ToListAsync(ct);
         }
 
-        public async Task<T?> GetById(Guid id, CancellationToken ct = default)
+        public virtual async Task<T?> GetById(Guid id, CancellationToken ct = default)
         {
             return await Query().FirstOrDefaultAsync(x => x.Id == id, ct);
         }
 
-        public Task Create(T entity, CancellationToken ct = default)
+        public virtual Task Create(T entity, CancellationToken ct = default)
         {
             AssignCurrentUserIfOwned(entity);
             ApplyAuditDatesOnCreate(entity);
@@ -96,7 +96,7 @@ namespace Data.Repositories
             return Task.CompletedTask;
         }
 
-        public async Task Update(T entity, CancellationToken ct = default)
+        public virtual async Task Update(T entity, CancellationToken ct = default)
         {
             var existingEntity = await Query().FirstOrDefaultAsync(x => x.Id == entity.Id, ct);
             if (existingEntity is null)
@@ -109,7 +109,7 @@ namespace Data.Repositories
             _context.Entry(existingEntity).CurrentValues.SetValues(entity);
         }
 
-        public async Task Delete(T entity, CancellationToken ct = default)
+        public virtual async Task Delete(T entity, CancellationToken ct = default)
         {
             var existingEntity = await Query().FirstOrDefaultAsync(x => x.Id == entity.Id, ct);
             if (existingEntity is null)
@@ -120,7 +120,7 @@ namespace Data.Repositories
             _context.Set<T>().Remove(existingEntity);
         }
 
-        public async Task Save(CancellationToken ct = default)
+        public virtual async Task Save(CancellationToken ct = default)
         {
             await _context.SaveChangesAsync(ct);
         }

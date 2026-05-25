@@ -2,6 +2,7 @@ using AutoMapper;
 using Data.Interfaces;
 using Domain.Dto.Medication;
 using Domain.Entity;
+using Enums;
 using Services.Interfaces;
 
 namespace Services.Services
@@ -10,7 +11,8 @@ namespace Services.Services
     {
         private readonly IMedicationRepository _medicationRepository;
 
-        public MedicationService(IMedicationRepository repository, IMapper mapper) : base(repository, mapper)
+        public MedicationService(IMedicationRepository repository, IMapper mapper)
+            : base(repository, mapper)
         {
             _medicationRepository = repository;
         }
@@ -23,6 +25,23 @@ namespace Services.Services
         public async Task<MedicationStatusesDto> GetMedicationStatuses()
         {
             return await _medicationRepository.GetMedicationStatuses();
+        }
+
+        public async Task<MedicationDailyStatusDetailsDto?> SetMedicationDailyStatus(
+            Guid medicationId,
+            DateOnly date,
+            MedicationDayStatus? status,
+            CancellationToken ct = default)
+        {
+            var dailyStatus = await _medicationRepository.SetMedicationDailyStatus(
+                medicationId,
+                date,
+                status,
+                ct);
+
+            return dailyStatus is null
+                ? null
+                : _mapper.Map<MedicationDailyStatusDetailsDto>(dailyStatus);
         }
     }
 }

@@ -6,6 +6,7 @@ import '../../data/datasources/auth_local_data_source.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/datasources/secure_credentials_data_source.dart';
 import '../../data/repositories/backend_auth_repository.dart';
+import '../../data/services/oauth_identity_provider.dart';
 import '../controllers/auth_controller.dart';
 import 'sign_in_page.dart';
 
@@ -28,6 +29,7 @@ class _AuthGatePageState extends State<AuthGatePage> {
         remoteDataSource: AuthRemoteDataSource(),
         secureCredentialsDataSource: SecureCredentialsDataSource(),
         appSessionCleanupService: AppSessionCleanupService(),
+        oauthIdentityProvider: OAuthIdentityProvider(),
       ),
     );
     _controller.initialize();

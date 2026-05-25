@@ -1,4 +1,10 @@
-enum MedicationFrequency { onceDaily, twiceDaily, threeTimesDaily, weekly }
+enum MedicationFrequency {
+  onceDaily,
+  twiceDaily,
+  threeTimesDaily,
+  dayAfterDay,
+  weekly,
+}
 
 enum MedicationForm { capsule, syringe, tablet, circle }
 
@@ -6,7 +12,7 @@ enum MedicationDayStatus { taken, pending, missed }
 
 enum MedicationSyncState { localOnly, pendingUpload, synced }
 
-class Medication { // TODO Add DayAfterDay 
+class Medication {
   const Medication({
     required this.id,
     required this.name,
@@ -31,7 +37,7 @@ class Medication { // TODO Add DayAfterDay
   final bool notificationsEnabled;
   final MedicationForm form;
   final List<int> scheduledWeekdays;
-  final Map<int, MedicationDayStatus> dayStatuses;
+  final Map<String, MedicationDayStatus> dayStatuses;
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? remoteId;
@@ -46,7 +52,7 @@ class Medication { // TODO Add DayAfterDay
     bool? notificationsEnabled,
     MedicationForm? form,
     List<int>? scheduledWeekdays,
-    Map<int, MedicationDayStatus>? dayStatuses,
+    Map<String, MedicationDayStatus>? dayStatuses,
     DateTime? createdAt,
     DateTime? updatedAt,
     String? remoteId,
@@ -73,10 +79,132 @@ class Medication { // TODO Add DayAfterDay
     return scheduledWeekdays.contains(weekday);
   }
 
+  bool isScheduledForDate(DateTime date) {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final createdDate = DateTime(
+      createdAt.year,
+      createdAt.month,
+      createdAt.day,
+    );
+    if (normalizedDate.isBefore(createdDate)) {
+      return false;
+    }
+
+    if (frequency == MedicationFrequency.dayAfterDay) {
+      return normalizedDate.difference(createdDate).inDays.isEven;
+    }
+
+    return isScheduledForWeekday(normalizedDate.weekday);
+  }
+
+  List<int> visibleTimesForDate(DateTime date) {
+    if (!isScheduledForDate(date)) {
+      return const [];
+    }
+
+    final sortedTimes = List<int>.from(timesInMinutes)..sort();
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final createdDate = DateTime(
+      createdAt.year,
+      createdAt.month,
+      createdAt.day,
+    );
+    if (normalizedDate != createdDate) {
+      return sortedTimes;
+    }
+
+    final createdMinutes = (createdAt.hour * 60) + createdAt.minute;
+    return sortedTimes.where((time) => time >= createdMinutes).toList();
+  }
+
+  bool wasCreatedAfterAllTimesForDate(DateTime date) {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final createdDate = DateTime(
+      createdAt.year,
+      createdAt.month,
+      createdAt.day,
+    );
+    if (normalizedDate != createdDate) {
+      return false;
+    }
+
+    if (!isScheduledForDate(normalizedDate) || timesInMinutes.isEmpty) {
+      return false;
+    }
+
+    return visibleTimesForDate(normalizedDate).isEmpty;
+  }
+
+  DateTime? nextReminderAt({
+    DateTime? after,
+    int searchDays = 14,
+  }) {
+    final referenceAfter = after ?? DateTime.now();
+    final startDate = DateTime(
+      referenceAfter.year,
+      referenceAfter.month,
+      referenceAfter.day,
+    );
+
+    for (var offset = 0; offset <= searchDays; offset++) {
+      final candidateDate = startDate.add(Duration(days: offset));
+      if (!isScheduledForDate(candidateDate)) {
+        continue;
+      }
+
+      final explicitStatus = explicitStatusForDate(candidateDate);
+      if (explicitStatus == MedicationDayStatus.taken ||
+          explicitStatus == MedicationDayStatus.missed) {
+        continue;
+      }
+
+      final availableTimes = visibleTimesForDate(candidateDate);
+      for (final time in availableTimes) {
+        final scheduledAt = DateTime(
+          candidateDate.year,
+          candidateDate.month,
+          candidateDate.day,
+          time ~/ 60,
+          time % 60,
+        );
+        if (scheduledAt.isAfter(referenceAfter)) {
+          return scheduledAt;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  MedicationDayStatus? explicitStatusForDate(DateTime date) {
+    return dayStatuses[_dateKey(date)];
+  }
+
+  Medication copyWithStatusForDate(DateTime date, MedicationDayStatus? status) {
+    final nextStatuses = Map<String, MedicationDayStatus>.from(dayStatuses);
+    final key = _dateKey(date);
+    if (status == null) {
+      nextStatuses.remove(key);
+    } else {
+      nextStatuses[key] = status;
+    }
+
+    return copyWith(dayStatuses: nextStatuses);
+  }
+
   MedicationDayStatus? statusForWeekday(int weekday) {
     if (!isScheduledForWeekday(weekday)) {
       return null;
     }
-    return dayStatuses[weekday] ?? MedicationDayStatus.pending;
+    return MedicationDayStatus.pending;
+  }
+
+  static String dateKey(DateTime date) => _dateKey(date);
+
+  static String _dateKey(DateTime date) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    final month = normalized.month.toString().padLeft(2, '0');
+    final day = normalized.day.toString().padLeft(2, '0');
+    return '${normalized.year}-$month-$day';
   }
 }

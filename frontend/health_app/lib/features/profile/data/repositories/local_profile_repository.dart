@@ -9,6 +9,11 @@ class LocalProfileRepository implements ProfileRepository {
   final ProfileLocalDataSource _localDataSource;
 
   @override
+  Future<UserProfile?> getCachedProfile() {
+    return _localDataSource.getProfile();
+  }
+
+  @override
   Future<UserProfile?> getProfile() {
     return _localDataSource.getProfile();
   }

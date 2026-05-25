@@ -7,6 +7,8 @@ import '../datasources/auth_local_data_source.dart';
 import '../datasources/auth_remote_data_source.dart';
 import '../datasources/secure_credentials_data_source.dart';
 import '../models/auth_session_model.dart';
+import '../models/provider_authorization_grant.dart';
+import '../services/oauth_identity_provider.dart';
 
 class BackendAuthRepository implements AuthRepository {
   BackendAuthRepository({
@@ -14,15 +16,18 @@ class BackendAuthRepository implements AuthRepository {
     required AuthRemoteDataSource remoteDataSource,
     required SecureCredentialsDataSource secureCredentialsDataSource,
     required AppSessionCleanupService appSessionCleanupService,
+    required OAuthIdentityProvider oauthIdentityProvider,
   }) : _localDataSource = localDataSource,
        _remoteDataSource = remoteDataSource,
        _secureCredentialsDataSource = secureCredentialsDataSource,
-       _appSessionCleanupService = appSessionCleanupService;
+       _appSessionCleanupService = appSessionCleanupService,
+       _oauthIdentityProvider = oauthIdentityProvider;
 
   final AuthLocalDataSource _localDataSource;
   final AuthRemoteDataSource _remoteDataSource;
   final SecureCredentialsDataSource _secureCredentialsDataSource;
   final AppSessionCleanupService _appSessionCleanupService;
+  final OAuthIdentityProvider _oauthIdentityProvider;
 
   @override
   Future<AuthSession?> restoreSession() async {
@@ -97,9 +102,36 @@ class BackendAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AuthSession> signInWithProvider(AuthProvider provider) {
-    throw const AuthException(
-      'Google and Yandex sign-in will be connected next. For now, use email and password.',
+  Future<AuthSession> signInWithProvider(AuthProvider provider) async {
+    final grant = await _oauthIdentityProvider.authorize(provider);
+    final session = switch (grant.provider) {
+      AuthProvider.google => await _signInWithGoogleGrant(grant),
+      AuthProvider.yandex => await _signInWithYandexGrant(grant),
+      AuthProvider.password => throw const AuthException(
+        'Password sign-in does not use OAuth.',
+      ),
+    };
+
+    await _localDataSource.saveSession(session);
+    await _secureCredentialsDataSource.clearCredentials();
+    return session;
+  }
+
+  @override
+  Future<void> requestPasswordReset({required String email}) {
+    return _remoteDataSource.requestPasswordReset(email: email);
+  }
+
+  @override
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    return _remoteDataSource.resetPassword(
+      email: email,
+      code: code,
+      newPassword: newPassword,
     );
   }
 
@@ -123,6 +155,7 @@ class BackendAuthRepository implements AuthRepository {
         _localDataSource.clearSession(),
         _secureCredentialsDataSource.clearCredentials(),
         _appSessionCleanupService.clearUserScopedData(),
+        _oauthIdentityProvider.signOut(),
       ]);
     }
   }
@@ -137,6 +170,32 @@ class BackendAuthRepository implements AuthRepository {
       email: email.trim(),
       password: password,
     );
+  }
+
+  Future<AuthSessionModel> _signInWithGoogleGrant(
+    ProviderAuthorizationGrant grant,
+  ) async {
+    final idToken = grant.idToken?.trim() ?? '';
+    if (idToken.isEmpty) {
+      throw const AuthException(
+        'Google did not return an ID token for app sign-in.',
+      );
+    }
+
+    return _remoteDataSource.signInWithGoogle(idToken: idToken);
+  }
+
+  Future<AuthSessionModel> _signInWithYandexGrant(
+    ProviderAuthorizationGrant grant,
+  ) async {
+    final accessToken = grant.accessToken?.trim() ?? '';
+    if (accessToken.isEmpty) {
+      throw const AuthException(
+        'Yandex did not return an access token for app sign-in.',
+      );
+    }
+
+    return _remoteDataSource.signInWithYandex(accessToken: accessToken);
   }
 
   bool _hasFreshAccessToken(AuthSession session) {

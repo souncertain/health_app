@@ -1,5 +1,6 @@
 using Domain.Dto.Medication;
 using Domain.Entity;
+using Enums;
 
 namespace Services.Interfaces
 {
@@ -7,5 +8,10 @@ namespace Services.Interfaces
     {
         Task<IEnumerable<MedicationSoonestNotificationDto>> GetSoonestNotification();
         Task<MedicationStatusesDto> GetMedicationStatuses();
+        Task<MedicationDailyStatusDetailsDto?> SetMedicationDailyStatus(
+            Guid medicationId,
+            DateOnly date,
+            MedicationDayStatus? status,
+            CancellationToken ct = default);
     }
 }

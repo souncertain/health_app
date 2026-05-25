@@ -18,6 +18,7 @@ namespace Services.Mappers
                 .ForMember(x => x.AppointmentDate, y => y.MapFrom(source => source.AppointmentDate))
                 .ForMember(x => x.TimeInMinutes, y => y.MapFrom(source => source.TimeInMinutes))
                 .ForMember(x => x.Location, y => y.MapFrom(source => source.Location))
+                .ForMember(x => x.VisitType, y => y.MapFrom(source => source.VisitType))
                 .ForMember(x => x.CreatedAt, y => y.Ignore())
                 .ForMember(x => x.LastUpdatedAt, y => y.Ignore());
 
@@ -29,8 +30,10 @@ namespace Services.Mappers
                 .ForMember(x => x.AppointmentDate, y => y.MapFrom(source => source.AppointmentDate))
                 .ForMember(x => x.TimeInMinutes, y => y.MapFrom(source => source.TimeInMinutes))
                 .ForMember(x => x.Location, y => y.MapFrom(source => source.Location))
+                .ForMember(x => x.VisitType, y => y.MapFrom(source => source.VisitType))
                 .ForMember(x => x.CreatedAt, y => y.MapFrom(source => source.CreatedAt))
-                .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => source.LastUpdatedAt));
+                .ForMember(x => x.LastUpdatedAt, y => y.MapFrom(source => source.LastUpdatedAt))
+                .ForMember(x => x.ScheduledAt, y => y.MapFrom(source => source.ScheduledAt));
         }
     }
 }

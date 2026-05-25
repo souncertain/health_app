@@ -36,7 +36,8 @@ class MedicationModel extends Medication {
   }
 
   factory MedicationModel.fromJson(Map<String, dynamic> json) {
-    final rawStatuses = json['dayStatuses'] as Map<String, dynamic>;
+    final rawStatuses =
+        json['dayStatuses'] as Map<String, dynamic>? ?? const {};
     return MedicationModel(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -56,7 +57,7 @@ class MedicationModel extends Medication {
           .toList(),
       dayStatuses: rawStatuses.map(
         (key, value) => MapEntry(
-          int.parse(key),
+          key,
           MedicationDayStatus.values.firstWhere(
             (status) => status.name == value,
           ),
@@ -83,7 +84,7 @@ class MedicationModel extends Medication {
       'form': form.name,
       'scheduledWeekdays': scheduledWeekdays,
       'dayStatuses': dayStatuses.map(
-        (key, value) => MapEntry(key.toString(), value.name),
+        (key, value) => MapEntry(key, value.name),
       ),
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),

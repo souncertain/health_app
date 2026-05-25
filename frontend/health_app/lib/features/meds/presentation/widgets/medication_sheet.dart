@@ -27,7 +27,7 @@ class MedicationFormValue {
   const MedicationFormValue({
     required this.name,
     required this.dosage,
-    required this.baseTimeInMinutes,
+    required this.timesInMinutes,
     required this.frequency,
     required this.notificationsEnabled,
     required this.selectedWeekday,
@@ -35,7 +35,7 @@ class MedicationFormValue {
 
   final String name;
   final String dosage;
-  final int baseTimeInMinutes;
+  final List<int> timesInMinutes;
   final MedicationFrequency frequency;
   final bool notificationsEnabled;
   final int selectedWeekday;
@@ -67,15 +67,21 @@ class _MedicationSheetState extends State<MedicationSheet> {
   late final _dosageController = TextEditingController(
     text: widget.initialMedication?.dosage ?? '',
   );
-  late int _baseTimeInMinutes =
-      widget.initialMedication?.timesInMinutes.first ?? -1;
-  late MedicationFrequency _frequency =
-      widget.initialMedication?.frequency ?? MedicationFrequency.onceDaily;
-  late bool _notificationsEnabled =
-      widget.initialMedication?.notificationsEnabled ?? true;
+  late MedicationFrequency _frequency;
+  late bool _notificationsEnabled;
+  late List<int> _timesInMinutes;
   bool _isSubmitting = false;
 
   bool get _isEditing => widget.initialMedication != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _frequency = widget.initialMedication?.frequency ?? MedicationFrequency.onceDaily;
+    _notificationsEnabled = widget.initialMedication?.notificationsEnabled ?? true;
+    _timesInMinutes = _buildInitialTimes();
+    _syncTimeSlots();
+  }
 
   @override
   void dispose() {
@@ -84,30 +90,117 @@ class _MedicationSheetState extends State<MedicationSheet> {
     super.dispose();
   }
 
-  Future<void> _pickTime() async {
-    final initialTime = _baseTimeInMinutes < 0
-        ? const TimeOfDay(hour: 8, minute: 0)
-        : TimeOfDay(
-            hour: _baseTimeInMinutes ~/ 60,
-            minute: _baseTimeInMinutes % 60,
-          );
+  int get _requiredTimeSlots {
+    switch (_frequency) {
+      case MedicationFrequency.onceDaily:
+      case MedicationFrequency.dayAfterDay:
+      case MedicationFrequency.weekly:
+        return 1;
+      case MedicationFrequency.twiceDaily:
+        return 2;
+      case MedicationFrequency.threeTimesDaily:
+        return 3;
+    }
+  }
+
+  List<int> _buildInitialTimes() {
+    final initialTimes = List<int>.from(
+      widget.initialMedication?.timesInMinutes ?? const [],
+    )..sort();
+    if (initialTimes.isNotEmpty) {
+      return initialTimes;
+    }
+    return _defaultTimesForFrequency(_frequency);
+  }
+
+  List<int> _defaultTimesForFrequency(MedicationFrequency frequency) {
+    switch (frequency) {
+      case MedicationFrequency.onceDaily:
+      case MedicationFrequency.dayAfterDay:
+      case MedicationFrequency.weekly:
+        return const [8 * 60];
+      case MedicationFrequency.twiceDaily:
+        return const [8 * 60, 20 * 60];
+      case MedicationFrequency.threeTimesDaily:
+        return const [8 * 60, 14 * 60, 20 * 60];
+    }
+  }
+
+  void _syncTimeSlots() {
+    final normalized = List<int>.from(_timesInMinutes)..sort();
+    while (normalized.length < _requiredTimeSlots) {
+      normalized.add(_suggestTimeForSlot(normalized, normalized.length));
+    }
+    if (normalized.length > _requiredTimeSlots) {
+      normalized.removeRange(_requiredTimeSlots, normalized.length);
+    }
+    normalized.sort();
+    _timesInMinutes = normalized;
+  }
+
+  int _suggestTimeForSlot(List<int> current, int slotIndex) {
+    if (current.isNotEmpty) {
+      final baseTime = current.first;
+      if (_frequency == MedicationFrequency.twiceDaily && slotIndex == 1) {
+        return _normalizeMinutes(baseTime + (12 * 60));
+      }
+      if (_frequency == MedicationFrequency.threeTimesDaily) {
+        if (slotIndex == 1) {
+          return _normalizeMinutes(baseTime + (6 * 60));
+        }
+        if (slotIndex == 2) {
+          return _normalizeMinutes(baseTime + (12 * 60));
+        }
+      }
+    }
+
+    final defaults = _defaultTimesForFrequency(_frequency);
+    final safeIndex = slotIndex.clamp(0, defaults.length - 1);
+    return defaults[safeIndex];
+  }
+
+  int _normalizeMinutes(int minutes) {
+    const minutesPerDay = 24 * 60;
+    final normalized = minutes % minutesPerDay;
+    return normalized < 0 ? normalized + minutesPerDay : normalized;
+  }
+
+  Future<void> _pickTime(int index) async {
+    final initialValue = _timesInMinutes[index];
     final selected = await showTimePicker(
       context: context,
-      initialTime: initialTime,
+      initialTime: TimeOfDay(
+        hour: initialValue ~/ 60,
+        minute: initialValue % 60,
+      ),
     );
 
     if (selected != null) {
-      setState(() => _baseTimeInMinutes = selected.hour * 60 + selected.minute);
+      final updated = List<int>.from(_timesInMinutes);
+      updated[index] = selected.hour * 60 + selected.minute;
+      updated.sort();
+      setState(() => _timesInMinutes = updated);
     }
+  }
+
+  void _selectFrequency(MedicationFrequency frequency) {
+    setState(() {
+      _frequency = frequency;
+      _syncTimeSlots();
+    });
   }
 
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    if (_baseTimeInMinutes < 0) {
+
+    final timesInMinutes = List<int>.from(_timesInMinutes)..sort();
+    if (timesInMinutes.toSet().length != timesInMinutes.length) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите время приема.')),
+        const SnackBar(
+          content: Text('Время приема не должно повторяться.'),
+        ),
       );
       return;
     }
@@ -119,7 +212,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
         MedicationFormValue(
           name: _nameController.text.trim(),
           dosage: _dosageController.text.trim(),
-          baseTimeInMinutes: _baseTimeInMinutes,
+          timesInMinutes: timesInMinutes,
           frequency: _frequency,
           notificationsEnabled: _notificationsEnabled,
           selectedWeekday: widget.selectedWeekday,
@@ -202,20 +295,6 @@ class _MedicationSheetState extends State<MedicationSheet> {
               validator: requiredFieldValidator,
             ),
             const SizedBox(height: 20),
-            AppPickerField(
-              label: 'Время',
-              text: _baseTimeInMinutes < 0
-                  ? null
-                  : formatMinutesAsClock(_baseTimeInMinutes),
-              placeholder: '--:--',
-              onTap: _isSubmitting ? null : _pickTime,
-              accentColor: const Color(0xFF18A8CC),
-              suffixIcon: const Icon(
-                Icons.access_time_rounded,
-                color: Color(0xFF8FA1BC),
-              ),
-            ),
-            const SizedBox(height: 20),
             const AppFieldLabel('Частота приема'),
             const SizedBox(height: 12),
             Wrap(
@@ -228,11 +307,35 @@ class _MedicationSheetState extends State<MedicationSheet> {
                       selected: frequency == _frequency,
                       onTap: _isSubmitting
                           ? null
-                          : () => setState(() => _frequency = frequency),
+                          : () => _selectFrequency(frequency),
                       selectedColor: const Color(0xFF18A8CC),
                     ),
                   )
                   .toList(),
+            ),
+            const SizedBox(height: 20),
+            Column(
+              children: List<Widget>.generate(_timesInMinutes.length, (index) {
+                final label = _timesInMinutes.length == 1
+                    ? 'Время приема'
+                    : 'Время приема ${index + 1}';
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: index == _timesInMinutes.length - 1 ? 0 : 16,
+                  ),
+                  child: AppPickerField(
+                    label: label,
+                    text: formatMinutesAsClock(_timesInMinutes[index]),
+                    placeholder: '--:--',
+                    onTap: _isSubmitting ? null : () => _pickTime(index),
+                    accentColor: const Color(0xFF18A8CC),
+                    suffixIcon: const Icon(
+                      Icons.access_time_rounded,
+                      color: Color(0xFF8FA1BC),
+                    ),
+                  ),
+                );
+              }),
             ),
             const SizedBox(height: 20),
             Container(
@@ -321,6 +424,8 @@ String medicationFrequencyLabel(MedicationFrequency frequency) {
       return '2 раза в день';
     case MedicationFrequency.threeTimesDaily:
       return '3 раза в день';
+    case MedicationFrequency.dayAfterDay:
+      return 'Через день';
     case MedicationFrequency.weekly:
       return '1 раз в неделю';
   }

@@ -9,8 +9,14 @@ class ProfileLocalDataSource {
 
   static const profileStorageKey = 'profile.user_profile';
   static const notificationsEnabledStorageKey = 'profile.notifications_enabled';
+  UserProfileModel? _cachedProfile;
+  bool _hasLoadedCache = false;
 
   Future<UserProfileModel?> getProfile() async {
+    if (_hasLoadedCache) {
+      return _cachedProfile;
+    }
+
     final preferences = await SharedPreferences.getInstance();
     final raw = preferences.getString(profileStorageKey);
     final notificationsEnabled = preferences.getBool(
@@ -18,6 +24,8 @@ class ProfileLocalDataSource {
     );
 
     if (raw == null || raw.isEmpty) {
+      _cachedProfile = null;
+      _hasLoadedCache = true;
       return null;
     }
 
@@ -26,12 +34,16 @@ class ProfileLocalDataSource {
     );
     if (notificationsEnabled == null ||
         notificationsEnabled == profile.notificationsEnabled) {
+      _cachedProfile = profile;
+      _hasLoadedCache = true;
       return profile;
     }
 
-    return UserProfileModel.fromEntity(
+    _cachedProfile = UserProfileModel.fromEntity(
       profile.copyWith(notificationsEnabled: notificationsEnabled),
     );
+    _hasLoadedCache = true;
+    return _cachedProfile;
   }
 
   Future<void> saveProfile(UserProfileModel profile) async {
@@ -44,11 +56,15 @@ class ProfileLocalDataSource {
       notificationsEnabledStorageKey,
       profile.notificationsEnabled,
     );
+    _cachedProfile = profile;
+    _hasLoadedCache = true;
   }
 
   Future<void> clear() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(profileStorageKey);
     await preferences.remove(notificationsEnabledStorageKey);
+    _cachedProfile = null;
+    _hasLoadedCache = true;
   }
 }

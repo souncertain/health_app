@@ -10,12 +10,20 @@ class MedicalVisitsLocalDataSource {
   static const _storageKey = 'visits.medical_visits';
   static const _storageVersionKey = 'visits.medical_visits.version';
   static const _currentStorageVersion = 2;
+  List<MedicalVisitModel>? _cachedVisits;
+  bool _hasLoadedCache = false;
 
   Future<List<MedicalVisitModel>> getVisits() async {
+    if (_hasLoadedCache) {
+      return List<MedicalVisitModel>.from(_cachedVisits ?? const []);
+    }
+
     final preferences = await SharedPreferences.getInstance();
     final raw = preferences.getString(_storageKey);
 
     if (raw == null || raw.isEmpty) {
+      _cachedVisits = const [];
+      _hasLoadedCache = true;
       return const [];
     }
 
@@ -33,7 +41,9 @@ class MedicalVisitsLocalDataSource {
       await saveAll(visits);
     }
 
-    return visits;
+    _cachedVisits = List<MedicalVisitModel>.from(visits);
+    _hasLoadedCache = true;
+    return List<MedicalVisitModel>.from(visits);
   }
 
   Future<void> saveAll(List<MedicalVisitModel> visits) async {
@@ -41,12 +51,16 @@ class MedicalVisitsLocalDataSource {
     final encoded = jsonEncode(visits.map((item) => item.toJson()).toList());
     await preferences.setString(_storageKey, encoded);
     await preferences.setInt(_storageVersionKey, _currentStorageVersion);
+    _cachedVisits = List<MedicalVisitModel>.from(visits);
+    _hasLoadedCache = true;
   }
 
   Future<void> clear() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_storageKey);
     await preferences.remove(_storageVersionKey);
+    _cachedVisits = null;
+    _hasLoadedCache = true;
   }
 
   List<Map<String, dynamic>> _migrateStoredVisits(List<dynamic> decoded) {
@@ -73,7 +87,8 @@ class MedicalVisitsLocalDataSource {
             json['specialty'] = 'Р­РЅРґРѕРєСЂРёРЅРѕР»РѕРі';
           }
           if (json['location'] == 'Diabetes & Hormones Clinic') {
-            json['location'] = 'РљР»РёРЅРёРєР° РґРёР°Р±РµС‚Р° Рё РіРѕСЂРјРѕРЅРѕРІ';
+            json['location'] =
+                'РљР»РёРЅРёРєР° РґРёР°Р±РµС‚Р° Рё РіРѕСЂРјРѕРЅРѕРІ';
           }
           break;
       }

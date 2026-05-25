@@ -137,11 +137,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
                   color: visuals.iconBackground,
                   borderRadius: BorderRadius.circular(28),
                 ),
-                child: Icon(
-                  visuals.icon,
-                  color: visuals.accentColor,
-                  size: 48,
-                ),
+                child: Icon(visuals.icon, color: visuals.accentColor, size: 48),
               ),
             ),
             const SizedBox(height: 28),
@@ -150,7 +146,9 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
               hintText: 'Введите ${widget.metric.unit}',
               controller: _valueController,
               accentColor: visuals.accentColor,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: visuals.accentColor,
@@ -167,10 +165,8 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
                 vertical: 24,
               ),
               borderRadius: 24,
-              validator: (value) => decimalNumberValidator(
-                value,
-                message: 'Введите значение',
-              ),
+              validator: (value) =>
+                  decimalNumberValidator(value, message: 'Введите значение'),
             ),
             const SizedBox(height: 10),
             Center(

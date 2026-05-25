@@ -9,6 +9,11 @@ class LocalMedicalVisitRepository implements MedicalVisitRepository {
   final MedicalVisitsLocalDataSource _localDataSource;
 
   @override
+  Future<List<MedicalVisit>> getCachedVisits() {
+    return getVisits();
+  }
+
+  @override
   Future<List<MedicalVisit>> getVisits() async {
     final visits = await _localDataSource.getVisits();
     visits.sort(_sortVisits);

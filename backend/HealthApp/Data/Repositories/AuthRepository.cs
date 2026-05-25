@@ -46,6 +46,20 @@ namespace Data.Repositories
                 .FirstOrDefaultAsync(x => x.Id == sessionId, ct);
         }
 
+        public Task<AuthOneTimeCode?> GetLatestActiveOneTimeCode(Guid userId, AuthOneTimeCodePurpose purpose, CancellationToken ct = default)
+        {
+            var now = DateTime.UtcNow;
+            return _context.AuthOneTimeCodes
+                .Where(x =>
+                    x.UserId == userId &&
+                    x.Purpose == purpose &&
+                    !x.UsedAt.HasValue &&
+                    !x.InvalidatedAt.HasValue &&
+                    x.ExpiresAt > now)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync(ct);
+        }
+
         public Task AddUser(User user, CancellationToken ct = default)
         {
             ApplyAuditDatesOnCreate(user);
@@ -65,6 +79,44 @@ namespace Data.Repositories
             ApplyAuditDatesOnCreate(session);
             _context.AuthRefreshSessions.Add(session);
             return Task.CompletedTask;
+        }
+
+        public Task AddOneTimeCode(AuthOneTimeCode code, CancellationToken ct = default)
+        {
+            ApplyAuditDatesOnCreate(code);
+            _context.AuthOneTimeCodes.Add(code);
+            return Task.CompletedTask;
+        }
+
+        public async Task InvalidateActiveOneTimeCodes(Guid userId, AuthOneTimeCodePurpose purpose, DateTime invalidatedAtUtc, CancellationToken ct = default)
+        {
+            var codes = await _context.AuthOneTimeCodes
+                .Where(x =>
+                    x.UserId == userId &&
+                    x.Purpose == purpose &&
+                    !x.UsedAt.HasValue &&
+                    !x.InvalidatedAt.HasValue &&
+                    x.ExpiresAt > invalidatedAtUtc)
+                .ToListAsync(ct);
+
+            foreach (var code in codes)
+            {
+                code.InvalidatedAt = invalidatedAtUtc;
+                code.LastUpdatedAt = invalidatedAtUtc;
+            }
+        }
+
+        public async Task RevokeActiveRefreshSessions(Guid userId, DateTime revokedAtUtc, CancellationToken ct = default)
+        {
+            var sessions = await _context.AuthRefreshSessions
+                .Where(x => x.UserId == userId && !x.RevokedAt.HasValue && x.ExpiresAt > revokedAtUtc)
+                .ToListAsync(ct);
+
+            foreach (var session in sessions)
+            {
+                session.RevokedAt = revokedAtUtc;
+                session.LastUpdatedAt = revokedAtUtc;
+            }
         }
 
         public Task Save(CancellationToken ct = default)

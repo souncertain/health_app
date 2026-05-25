@@ -44,5 +44,8 @@ namespace Domain.Entity
 
         [InverseProperty(nameof(AuthRefreshSession.User))]
         public ICollection<AuthRefreshSession> AuthRefreshSessions { get; set; } = new List<AuthRefreshSession>();
+
+        [InverseProperty(nameof(AuthOneTimeCode.User))]
+        public ICollection<AuthOneTimeCode> AuthOneTimeCodes { get; set; } = new List<AuthOneTimeCode>();
     }
 }

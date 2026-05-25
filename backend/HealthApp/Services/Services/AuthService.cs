@@ -17,7 +17,10 @@ namespace Services.Services
         private readonly IJwtTokenFactory _jwtTokenFactory;
         private readonly IPasswordHashService _passwordHashService;
         private readonly IRefreshTokenFactory _refreshTokenFactory;
+        private readonly IOneTimeCodeFactory _oneTimeCodeFactory;
         private readonly IAuthSessionPolicy _sessionPolicy;
+        private readonly IPasswordResetPolicy _passwordResetPolicy;
+        private readonly IAccountEmailSender _accountEmailSender;
         private readonly ICurrentUserContext _currentUserContext;
 
         public AuthService(
@@ -27,7 +30,10 @@ namespace Services.Services
             IJwtTokenFactory jwtTokenFactory,
             IPasswordHashService passwordHashService,
             IRefreshTokenFactory refreshTokenFactory,
+            IOneTimeCodeFactory oneTimeCodeFactory,
             IAuthSessionPolicy sessionPolicy,
+            IPasswordResetPolicy passwordResetPolicy,
+            IAccountEmailSender accountEmailSender,
             ICurrentUserContext currentUserContext)
         {
             _repository = repository;
@@ -36,7 +42,10 @@ namespace Services.Services
             _jwtTokenFactory = jwtTokenFactory;
             _passwordHashService = passwordHashService;
             _refreshTokenFactory = refreshTokenFactory;
+            _oneTimeCodeFactory = oneTimeCodeFactory;
             _sessionPolicy = sessionPolicy;
+            _passwordResetPolicy = passwordResetPolicy;
+            _accountEmailSender = accountEmailSender;
             _currentUserContext = currentUserContext;
         }
 
@@ -46,7 +55,7 @@ namespace Services.Services
             var existingUser = await _repository.GetUserByEmail(normalizedEmail, ct);
             if (existingUser is not null)
             {
-                throw new AuthException("Пользователь с таким email уже существует.", HttpStatusCode.Conflict);
+                throw new AuthException("A user with this email already exists.", HttpStatusCode.Conflict);
             }
 
             var user = new User
@@ -77,13 +86,13 @@ namespace Services.Services
             var user = await _repository.GetUserByEmail(normalizedEmail, ct);
             if (user is null)
             {
-                throw new AuthException("Неверный email или пароль.", HttpStatusCode.Unauthorized);
+                throw new AuthException("Invalid email or password.", HttpStatusCode.Unauthorized);
             }
 
             var verifyResult = _passwordHashService.VerifyPassword(user, user.PasswordHash, dto.Password);
             if (verifyResult == PasswordVerificationResult.Failed)
             {
-                throw new AuthException("Неверный email или пароль.", HttpStatusCode.Unauthorized);
+                throw new AuthException("Invalid email or password.", HttpStatusCode.Unauthorized);
             }
 
             if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -138,25 +147,138 @@ namespace Services.Services
             return session;
         }
 
+        public async Task RequestPasswordReset(AuthForgotPasswordRequestDto dto, CancellationToken ct)
+        {
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            var user = await _repository.GetUserByEmail(normalizedEmail, ct);
+            if (user is null)
+            {
+                return;
+            }
+
+            var now = DateTime.UtcNow;
+            var latestCode = await _repository.GetLatestActiveOneTimeCode(
+                user.Id,
+                AuthOneTimeCodePurpose.PasswordReset,
+                ct);
+
+            if (latestCode is not null && now - latestCode.CreatedAt < _passwordResetPolicy.ResendCooldown)
+            {
+                return;
+            }
+
+            await _repository.InvalidateActiveOneTimeCodes(
+                user.Id,
+                AuthOneTimeCodePurpose.PasswordReset,
+                now,
+                ct);
+
+            var code = _oneTimeCodeFactory.CreateNumericCode(_passwordResetPolicy.CodeLength);
+            var authCode = new AuthOneTimeCode
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                User = user,
+                Email = normalizedEmail,
+                Purpose = AuthOneTimeCodePurpose.PasswordReset,
+                CodeHash = _oneTimeCodeFactory.HashCode(code),
+                ExpiresAt = now.Add(_passwordResetPolicy.CodeLifetime),
+                MaxAllowedAttempts = _passwordResetPolicy.MaxAttempts,
+                FailedAttemptCount = 0
+            };
+
+            await _repository.AddOneTimeCode(authCode, ct);
+            await _repository.Save(ct);
+
+            try
+            {
+                await _accountEmailSender.SendPasswordResetCode(
+                    normalizedEmail,
+                    code,
+                    _passwordResetPolicy.CodeLifetime,
+                    ct);
+            }
+            catch
+            {
+                authCode.InvalidatedAt = DateTime.UtcNow;
+                authCode.LastUpdatedAt = authCode.InvalidatedAt.Value;
+                await _repository.Save(ct);
+                throw;
+            }
+        }
+
+        public async Task ResetPassword(AuthResetPasswordDto dto, CancellationToken ct)
+        {
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            var code = NormalizeCode(dto.Code);
+            var user = await _repository.GetUserByEmail(normalizedEmail, ct);
+            if (user is null)
+            {
+                throw new AuthException("Invalid reset code or email.", HttpStatusCode.BadRequest);
+            }
+
+            var activeCode = await _repository.GetLatestActiveOneTimeCode(
+                user.Id,
+                AuthOneTimeCodePurpose.PasswordReset,
+                ct);
+
+            if (activeCode is null ||
+                !string.Equals(activeCode.Email, normalizedEmail, StringComparison.Ordinal) ||
+                activeCode.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new AuthException("Invalid reset code or email.", HttpStatusCode.BadRequest);
+            }
+
+            var incomingHash = _oneTimeCodeFactory.HashCode(code);
+            if (!string.Equals(activeCode.CodeHash, incomingHash, StringComparison.Ordinal))
+            {
+                activeCode.FailedAttemptCount += 1;
+                activeCode.LastUpdatedAt = DateTime.UtcNow;
+                if (activeCode.FailedAttemptCount >= activeCode.MaxAllowedAttempts)
+                {
+                    activeCode.InvalidatedAt = DateTime.UtcNow;
+                }
+
+                await _repository.Save(ct);
+                throw new AuthException("Invalid reset code or email.", HttpStatusCode.BadRequest);
+            }
+
+            var now = DateTime.UtcNow;
+            user.PasswordHash = _passwordHashService.HashPassword(user, dto.NewPassword);
+            user.LastUpdatedAt = now;
+
+            activeCode.UsedAt = now;
+            activeCode.LastUpdatedAt = now;
+
+            await _repository.InvalidateActiveOneTimeCodes(
+                user.Id,
+                AuthOneTimeCodePurpose.PasswordReset,
+                now,
+                ct);
+            await _repository.RevokeActiveRefreshSessions(user.Id, now, ct);
+
+            await _repository.Save(ct);
+        }
+
         public async Task<AuthSessionDto> Refresh(AuthRefreshDto dto, CancellationToken ct)
         {
             var sessionId = ParseSessionId(dto.RefreshSessionId);
             var session = await _repository.GetRefreshSession(sessionId, ct);
             if (session?.User is null)
             {
-                throw new AuthException("Сессия обновления не найдена.", HttpStatusCode.Unauthorized);
+                throw new AuthException("Refresh session not found.", HttpStatusCode.Unauthorized);
             }
 
             var now = DateTime.UtcNow;
             if (session.RevokedAt.HasValue || session.ExpiresAt <= now)
             {
-                throw new AuthException("Сессия обновления истекла. Выполните вход снова.", HttpStatusCode.Unauthorized);
+                throw new AuthException("Refresh session has expired. Please sign in again.", HttpStatusCode.Unauthorized);
             }
 
             var incomingHash = _refreshTokenFactory.HashToken(dto.RefreshToken);
             if (!string.Equals(session.RefreshTokenHash, incomingHash, StringComparison.Ordinal))
             {
-                throw new AuthException("Недействительный refresh token.", HttpStatusCode.Unauthorized);
+                throw new AuthException("Invalid refresh token.", HttpStatusCode.Unauthorized);
             }
 
             var newRefreshToken = _refreshTokenFactory.CreateToken();
@@ -214,13 +336,13 @@ namespace Services.Services
         {
             if (!_currentUserContext.HasUserId)
             {
-                throw new AuthException("Пользователь не авторизован.", HttpStatusCode.Unauthorized);
+                throw new AuthException("User is not authenticated.", HttpStatusCode.Unauthorized);
             }
 
             var user = await _repository.GetUserById(_currentUserContext.UserId!.Value, ct);
             if (user is null)
             {
-                throw new AuthException("Пользователь не найден.", HttpStatusCode.Unauthorized);
+                throw new AuthException("User not found.", HttpStatusCode.Unauthorized);
             }
 
             return new AuthCurrentUserDto
@@ -241,7 +363,7 @@ namespace Services.Services
         {
             if (!externalProfile.EmailVerified)
             {
-                throw new AuthException("Провайдер не подтвердил email пользователя.", HttpStatusCode.Unauthorized);
+                throw new AuthException("The provider did not confirm the user's email.", HttpStatusCode.Unauthorized);
             }
 
             var normalizedEmail = NormalizeEmail(externalProfile.Email);
@@ -335,7 +457,7 @@ namespace Services.Services
         {
             if (!Guid.TryParse(refreshSessionId, out var sessionId))
             {
-                throw new AuthException("Некорректный refresh session id.");
+                throw new AuthException("Invalid refresh session id.");
             }
 
             return sessionId;
@@ -346,7 +468,18 @@ namespace Services.Services
             var normalized = email.Trim().ToLowerInvariant();
             if (string.IsNullOrWhiteSpace(normalized))
             {
-                throw new AuthException("Email обязателен.");
+                throw new AuthException("Email is required.");
+            }
+
+            return normalized;
+        }
+
+        private static string NormalizeCode(string code)
+        {
+            var normalized = code.Trim().Replace(" ", string.Empty, StringComparison.Ordinal);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                throw new AuthException("Reset code is required.");
             }
 
             return normalized;
@@ -385,7 +518,7 @@ namespace Services.Services
             var localPart = email.Split('@').FirstOrDefault()?.Trim() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(localPart))
             {
-                return "Пользователь";
+                return "User";
             }
 
             var textInfo = CultureInfo.InvariantCulture.TextInfo;
@@ -394,7 +527,7 @@ namespace Services.Services
                 .Select(textInfo.ToTitleCase)
                 .ToList();
 
-            return parts.Count == 0 ? "Пользователь" : string.Join(" ", parts);
+            return parts.Count == 0 ? "User" : string.Join(" ", parts);
         }
 
         private static string ToProviderName(AuthProvider provider) => provider switch

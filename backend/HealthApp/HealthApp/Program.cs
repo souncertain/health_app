@@ -1,13 +1,16 @@
-using Data;
+﻿using Data;
 using Data.Interfaces;
 using Data.Repositories;
 using Domain.Exceptions;
 using HealthApp.Configuration;
 using HealthApp.Infrastructure;
 using HealthApp.Infrastructure.Auth;
+using HealthApp.Infrastructure.Ai;
+using HealthApp.Infrastructure.Email;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Services.Interfaces;
 using Services.Mappers;
 using Services.Services;
@@ -15,24 +18,27 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Configuration.AddJsonFile("appsettings.json");
 string connection = builder.Configuration.GetConnectionString("EFPostgres")!;
 builder.Services.Configure<AuthOptions>(builder.Configuration.GetSection(AuthOptions.SectionName));
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.Configure<DoctorNoteScannerOptions>(builder.Configuration.GetSection(DoctorNoteScannerOptions.SectionName));
 builder.Services.AddDbContext<HealthAppDbContext>(options => options.UseNpgsql(connection));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserContext, HttpCurrentUserContext>();
 builder.Services.AddHttpClient<IYandexIdentityProviderClient, YandexIdentityProviderClient>();
+builder.Services.AddHttpClient<IDoctorNoteScannerService, OpenAiDoctorNoteScannerService>();
 builder.Services.AddScoped<IGoogleIdentityTokenValidator, GoogleIdentityTokenValidator>();
 builder.Services.AddScoped<IJwtTokenFactory, JwtTokenFactory>();
 builder.Services.AddScoped<IPasswordHashService, PasswordHashService>();
 builder.Services.AddScoped<IRefreshTokenFactory, RefreshTokenFactory>();
+builder.Services.AddScoped<IOneTimeCodeFactory, OneTimeCodeFactory>();
 builder.Services.AddScoped<IAuthSessionPolicy, AuthSessionPolicy>();
+builder.Services.AddScoped<IPasswordResetPolicy, PasswordResetPolicy>();
+builder.Services.AddScoped<IAccountEmailSender, ConfigurableAccountEmailSender>();
 
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions();
 if (string.IsNullOrWhiteSpace(authOptions.Jwt.SigningKey) || authOptions.Jwt.SigningKey.Length < 32)
@@ -86,17 +92,47 @@ builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<IHealthMetricService, HealthMetricService>();
 builder.Services.AddScoped<IMetricRecordService, MetricRecordService>();
 
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "HealthApp API",
+        Version = "v1"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Insert only the JWT access token. Swagger will add the Bearer prefix automatically."
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 
 app.UseCors(x => x.AllowAnyOrigin());
 app.Use(async (context, next) =>
@@ -110,6 +146,12 @@ app.Use(async (context, next) =>
         context.Response.StatusCode = (int)authException.StatusCode;
         context.Response.ContentType = "application/json";
         await context.Response.WriteAsJsonAsync(new { message = authException.Message });
+    }
+    catch (ApiException apiException)
+    {
+        context.Response.StatusCode = (int)apiException.StatusCode;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsJsonAsync(new { message = apiException.Message });
     }
 });
 

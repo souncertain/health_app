@@ -46,6 +46,22 @@ namespace HealthApp.Controllers
         }
 
         [AllowAnonymous]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] AuthForgotPasswordRequestDto dto, CancellationToken ct)
+        {
+            await _authService.RequestPasswordReset(dto, ct);
+            return NoContent();
+        }
+
+        [AllowAnonymous]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] AuthResetPasswordDto dto, CancellationToken ct)
+        {
+            await _authService.ResetPassword(dto, ct);
+            return NoContent();
+        }
+
+        [AllowAnonymous]
         [HttpPost("refresh")]
         public Task<AuthSessionDto> Refresh([FromBody] AuthRefreshDto dto, CancellationToken ct)
         {

@@ -12,10 +12,8 @@ Future<void> showAppointmentSheet({
   return showAppModalSheet<void>(
     context: context,
     heightFactor: 0.94,
-    builder: (_) => AppointmentSheet(
-      initialVisit: initialVisit,
-      onSubmit: onSubmit,
-    ),
+    builder: (_) =>
+        AppointmentSheet(initialVisit: initialVisit, onSubmit: onSubmit),
   );
 }
 
@@ -122,9 +120,9 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       return;
     }
     if (_selectedTimeInMinutes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Выберите время приёма.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Выберите время приёма.')));
       return;
     }
 

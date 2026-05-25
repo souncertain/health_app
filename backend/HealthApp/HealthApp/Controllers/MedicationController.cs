@@ -31,5 +31,20 @@ namespace HealthApp.Controllers
         {
             return await _medicationService.GetMedicationStatuses();
         }
+
+        [HttpPut("{medicationId:guid}/daily-status")]
+        public async Task<ActionResult<MedicationDailyStatusDetailsDto?>> SetDailyStatus(
+            Guid medicationId,
+            [FromBody] MedicationDailyStatusUpsertDto dto,
+            CancellationToken ct)
+        {
+            var result = await _medicationService.SetMedicationDailyStatus(
+                medicationId,
+                dto.Date,
+                dto.Status,
+                ct);
+
+            return result;
+        }
     }
 }

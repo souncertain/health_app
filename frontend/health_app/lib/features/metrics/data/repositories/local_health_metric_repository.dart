@@ -9,6 +9,11 @@ class LocalHealthMetricRepository implements HealthMetricRepository {
   final HealthMetricsLocalDataSource _localDataSource;
 
   @override
+  Future<List<HealthMetricItem>> getCachedMetrics() {
+    return getMetrics();
+  }
+
+  @override
   Future<List<HealthMetricItem>> getMetrics() async {
     final metrics = await _localDataSource.getMetrics();
     metrics.sort(_sortMetrics);

@@ -9,11 +9,16 @@ import '../../features/auth/data/models/auth_session_model.dart';
 import 'api_exception.dart';
 
 class AuthenticatedApiClient {
+  static final HttpClient _sharedHttpClient = HttpClient()
+    ..idleTimeout = const Duration(minutes: 2)
+    ..connectionTimeout = const Duration(seconds: 10)
+    ..maxConnectionsPerHost = 8;
+
   AuthenticatedApiClient({
     HttpClient? httpClient,
     AuthLocalDataSource? authLocalDataSource,
     AuthRemoteDataSource? authRemoteDataSource,
-  }) : _httpClient = httpClient ?? HttpClient(),
+  }) : _httpClient = httpClient ?? _sharedHttpClient,
        _authLocalDataSource = authLocalDataSource ?? AuthLocalDataSource(),
        _authRemoteDataSource = authRemoteDataSource ?? AuthRemoteDataSource();
 

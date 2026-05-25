@@ -1,23 +1,29 @@
-import '../../../../core/services/local_notifications_service.dart';
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
+import '../../../../core/services/local_notifications_service.dart';
 import '../../domain/entities/medical_visit.dart';
 import '../../domain/usecases/delete_medical_visit.dart';
+import '../../domain/usecases/get_cached_medical_visits.dart';
 import '../../domain/usecases/get_medical_visits.dart';
 import '../../domain/usecases/save_medical_visit.dart';
 
 class VisitsController extends ChangeNotifier {
   VisitsController({
+    required GetCachedMedicalVisitsUseCase getCachedVisits,
     required GetMedicalVisitsUseCase getVisits,
     required SaveMedicalVisitUseCase saveVisit,
     required DeleteMedicalVisitUseCase deleteVisit,
     NotificationScheduler? notificationScheduler,
-  }) : _getVisits = getVisits,
+  }) : _getCachedVisits = getCachedVisits,
+       _getVisits = getVisits,
        _saveVisit = saveVisit,
        _deleteVisit = deleteVisit,
        _notificationScheduler =
            notificationScheduler ?? LocalNotificationsService.instance;
 
+  final GetCachedMedicalVisitsUseCase _getCachedVisits;
   final GetMedicalVisitsUseCase _getVisits;
   final SaveMedicalVisitUseCase _saveVisit;
   final DeleteMedicalVisitUseCase _deleteVisit;
@@ -27,6 +33,7 @@ class VisitsController extends ChangeNotifier {
   bool _isSaving = false;
   String? _errorMessage;
   List<MedicalVisit> _visits = const [];
+  bool _initialized = false;
 
   bool get isLoading => _isLoading;
   bool get isSaving => _isSaving;
@@ -34,26 +41,31 @@ class VisitsController extends ChangeNotifier {
   List<MedicalVisit> get visits => List.unmodifiable(_visits);
 
   Future<void> initialize() async {
-    if (_isLoading || _visits.isNotEmpty) {
+    if (_initialized) {
       return;
     }
-    await refresh();
+
+    _initialized = true;
+    await _loadCached();
+    unawaited(refresh(showLoading: _visits.isEmpty));
   }
 
-  Future<void> refresh() async {
-    _isLoading = true;
+  Future<void> refresh({bool showLoading = true}) async {
+    if (showLoading) {
+      _isLoading = true;
+    }
     _errorMessage = null;
     notifyListeners();
 
     try {
-      final visits = await _getVisits();
-      _visits = List<MedicalVisit>.from(visits)
-        ..sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
+      _setVisits(await _getVisits());
       await _notificationScheduler.syncVisitNotifications(_visits);
     } catch (_) {
-      _errorMessage = 'Не удалось загрузить визиты.';
+      _errorMessage = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РІРёР·РёС‚С‹.';
     } finally {
-      _isLoading = false;
+      if (showLoading) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }
@@ -114,7 +126,7 @@ class VisitsController extends ChangeNotifier {
 
     await _persistVisit(
       visit,
-      errorMessage: 'Не удалось сохранить визит.',
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РІРёР·РёС‚.',
       rethrowOnFailure: true,
     );
   }
@@ -122,7 +134,7 @@ class VisitsController extends ChangeNotifier {
   Future<void> rescheduleVisit(MedicalVisit visit, int timeInMinutes) async {
     await _persistVisit(
       visit.copyWith(timeInMinutes: timeInMinutes, updatedAt: DateTime.now()),
-      errorMessage: 'Не удалось перенести визит.',
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ РїРµСЂРµРЅРµСЃС‚Рё РІРёР·РёС‚.',
       rethrowOnFailure: true,
     );
   }
@@ -130,14 +142,18 @@ class VisitsController extends ChangeNotifier {
   Future<void> deleteVisit(MedicalVisit visit) async {
     _isSaving = true;
     _errorMessage = null;
+    final previousVisits = _visits;
+    _setVisits(_visits.where((item) => item.id != visit.id).toList());
     notifyListeners();
 
     try {
       await _deleteVisit(visit.id);
       await _notificationScheduler.cancelVisitNotification(visit.id);
-      await refresh();
+      await _reloadFromCache();
     } catch (_) {
-      _errorMessage = 'Не удалось удалить визит.';
+      _setVisits(previousVisits);
+      _errorMessage = 'РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РІРёР·РёС‚.';
+      notifyListeners();
       rethrow;
     } finally {
       _isSaving = false;
@@ -152,12 +168,15 @@ class VisitsController extends ChangeNotifier {
   }) async {
     _isSaving = true;
     _errorMessage = null;
+    final previousVisits = _visits;
+    _setVisits(_upsertVisit(_visits, visit));
     notifyListeners();
 
     try {
       await _saveVisit(visit);
-      await refresh();
+      await _reloadFromCache();
     } catch (_) {
+      _setVisits(previousVisits);
       _errorMessage = errorMessage;
       if (rethrowOnFailure) {
         rethrow;
@@ -167,5 +186,43 @@ class VisitsController extends ChangeNotifier {
       _isSaving = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadCached() async {
+    try {
+      _setVisits(await _getCachedVisits());
+      await _notificationScheduler.syncVisitNotifications(_visits);
+    } catch (_) {
+      // Keep empty state if cache loading fails.
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> _reloadFromCache() async {
+    _setVisits(await _getCachedVisits());
+    await _notificationScheduler.syncVisitNotifications(_visits);
+  }
+
+  void _setVisits(List<MedicalVisit> visits) {
+    _visits = List<MedicalVisit>.from(visits)
+      ..sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
+  }
+
+  List<MedicalVisit> _upsertVisit(
+    List<MedicalVisit> source,
+    MedicalVisit visit,
+  ) {
+    final updated = List<MedicalVisit>.from(source);
+    final index = updated.indexWhere((item) => item.id == visit.id);
+    if (index == -1) {
+      updated.add(visit);
+    } else {
+      updated[index] = visit;
+    }
+
+    updated.sort((left, right) => left.scheduledAt.compareTo(right.scheduledAt));
+    return updated;
   }
 }

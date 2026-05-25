@@ -86,6 +86,39 @@ class AuthController extends ChangeNotifier {
 
     try {
       _session = await _repository.signInWithProvider(provider);
+      _savedCredentials = const SavedCredentials.empty();
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> requestPasswordReset({required String email}) async {
+    _isSubmitting = true;
+    notifyListeners();
+
+    try {
+      await _repository.requestPasswordReset(email: email);
+    } finally {
+      _isSubmitting = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) async {
+    _isSubmitting = true;
+    notifyListeners();
+
+    try {
+      await _repository.resetPassword(
+        email: email,
+        code: code,
+        newPassword: newPassword,
+      );
     } finally {
       _isSubmitting = false;
       notifyListeners();

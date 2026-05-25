@@ -59,7 +59,7 @@ extension AuthProviderPresentation on AuthProvider {
       case AuthProvider.google:
         return 'Google';
       case AuthProvider.yandex:
-        return 'Яндекс';
+        return 'Yandex';
     }
   }
 }

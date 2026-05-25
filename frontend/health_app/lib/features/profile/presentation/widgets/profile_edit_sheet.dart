@@ -131,14 +131,14 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
           children: [
             AppTextField(
               label: 'Имя и фамилия',
-              hintText: 'например, Алекс Джонсон',
+              hintText: 'например, Иван Петров',
               controller: _fullNameController,
               accentColor: const Color(0xFF18B552),
             ),
             const SizedBox(height: 18),
             AppTextField(
               label: 'E-mail',
-              hintText: 'например, alex@email.com',
+              hintText: 'например, ivan@email.com',
               controller: _emailController,
               accentColor: const Color(0xFF18B552),
               keyboardType: TextInputType.emailAddress,
@@ -236,6 +236,7 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
               hintText: 'Телефон, Telegram или другой способ связи',
               controller: _emergencyContactDetailsController,
               accentColor: const Color(0xFF18B552),
+              keyboardType: TextInputType.phone,
             ),
             const SizedBox(height: 26),
             SizedBox(

@@ -13,6 +13,7 @@ namespace Domain.Dto.Medication
         public List<int> TimesInMinutes { get; set; } = new List<int>();
         public bool NotificationsEnabled { get; set; }
         public List<int> ScheduledWeekdays { get; set; } = new List<int>();
+        public List<MedicationDailyStatusDetailsDto> DailyStatuses { get; set; } = new();
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
     }

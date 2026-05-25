@@ -10,12 +10,20 @@ class HealthMetricsLocalDataSource {
   static const _storageKey = 'metrics.health_metrics';
   static const _storageVersionKey = 'metrics.health_metrics.version';
   static const _currentStorageVersion = 2;
+  List<HealthMetricModel>? _cachedMetrics;
+  bool _hasLoadedCache = false;
 
   Future<List<HealthMetricModel>> getMetrics() async {
+    if (_hasLoadedCache) {
+      return List<HealthMetricModel>.from(_cachedMetrics ?? const []);
+    }
+
     final preferences = await SharedPreferences.getInstance();
     final raw = preferences.getString(_storageKey);
 
     if (raw == null || raw.isEmpty) {
+      _cachedMetrics = const [];
+      _hasLoadedCache = true;
       return const [];
     }
 
@@ -33,7 +41,9 @@ class HealthMetricsLocalDataSource {
       await saveAll(metrics);
     }
 
-    return metrics;
+    _cachedMetrics = List<HealthMetricModel>.from(metrics);
+    _hasLoadedCache = true;
+    return List<HealthMetricModel>.from(metrics);
   }
 
   Future<void> saveAll(List<HealthMetricModel> metrics) async {
@@ -43,12 +53,16 @@ class HealthMetricsLocalDataSource {
     );
     await preferences.setString(_storageKey, encoded);
     await preferences.setInt(_storageVersionKey, _currentStorageVersion);
+    _cachedMetrics = List<HealthMetricModel>.from(metrics);
+    _hasLoadedCache = true;
   }
 
   Future<void> clear() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_storageKey);
     await preferences.remove(_storageVersionKey);
+    _cachedMetrics = null;
+    _hasLoadedCache = true;
   }
 
   List<Map<String, dynamic>> _migrateStoredMetrics(List<dynamic> decoded) {

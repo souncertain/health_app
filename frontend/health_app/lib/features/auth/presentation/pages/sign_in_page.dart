@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/auth_exception.dart';
+import '../../domain/entities/auth_session.dart';
 import '../controllers/auth_controller.dart';
+import '../widgets/forgot_password_sheet.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key, required this.controller});
@@ -77,10 +79,35 @@ class _SignInPageState extends State<SignInPage> {
     }
   }
 
-  void _showProviderUnavailable() {
-    _showMessage(
-      'Google and Yandex sign-in will be connected next. For now, use email and password.',
+  Future<void> _submitProviderSignIn(AuthProvider provider) async {
+    try {
+      await widget.controller.signInWithProvider(provider);
+    } on AuthException catch (error) {
+      _showMessage(error.message);
+    } catch (_) {
+      final providerName = switch (provider) {
+        AuthProvider.google => 'Google',
+        AuthProvider.yandex => 'Yandex',
+        AuthProvider.password => 'email',
+      };
+      _showMessage('Could not sign in with $providerName. Please try again.');
+    }
+  }
+
+  Future<void> _openForgotPasswordFlow() async {
+    final restoredEmail = await showForgotPasswordSheet(
+      context,
+      controller: widget.controller,
+      initialEmail: _emailController.text.trim(),
     );
+
+    if (!mounted || restoredEmail == null) {
+      return;
+    }
+
+    _emailController.text = restoredEmail;
+    _passwordController.clear();
+    _showMessage('Password updated. You can now sign in with the new password.');
   }
 
   void _showMessage(String message) {
@@ -304,9 +331,9 @@ class _SignInPageState extends State<SignInPage> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
-                          onPressed: () => _showMessage(
-                            'Password recovery will be connected after the auth flow is fully integrated.',
-                          ),
+                          onPressed: widget.controller.isSubmitting
+                              ? null
+                              : _openForgotPasswordFlow,
                           child: const Text(
                             'Forgot password?',
                             style: TextStyle(
@@ -401,7 +428,7 @@ class _SignInPageState extends State<SignInPage> {
                         label: 'Continue with Google',
                         onTap: widget.controller.isSubmitting
                             ? null
-                            : _showProviderUnavailable,
+                            : () => _submitProviderSignIn(AuthProvider.google),
                       ),
                       const SizedBox(height: 14),
                       _SocialButton(
@@ -415,7 +442,7 @@ class _SignInPageState extends State<SignInPage> {
                         label: 'Continue with Yandex',
                         onTap: widget.controller.isSubmitting
                             ? null
-                            : _showProviderUnavailable,
+                            : () => _submitProviderSignIn(AuthProvider.yandex),
                       ),
                       const SizedBox(height: 18),
                       const Text(

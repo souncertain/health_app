@@ -6,6 +6,7 @@ namespace HealthApp.Configuration
 
         public JwtOptions Jwt { get; set; } = new();
         public RefreshTokenOptions RefreshTokens { get; set; } = new();
+        public PasswordResetOptions PasswordReset { get; set; } = new();
         public GoogleAuthOptions Google { get; set; } = new();
         public YandexAuthOptions Yandex { get; set; } = new();
     }
@@ -23,6 +24,14 @@ namespace HealthApp.Configuration
     {
         public int LifetimeHours { get; set; } = 24;
         public bool UseSlidingExpiration { get; set; } = true;
+    }
+
+    public class PasswordResetOptions
+    {
+        public int CodeLength { get; set; } = 6;
+        public int LifetimeMinutes { get; set; } = 15;
+        public int MaxAttempts { get; set; } = 5;
+        public int ResendCooldownSeconds { get; set; } = 60;
     }
 
     public class GoogleAuthOptions

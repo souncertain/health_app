@@ -1,6 +1,8 @@
 import '../entities/medical_visit.dart';
 
 abstract interface class MedicalVisitRepository {
+  Future<List<MedicalVisit>> getCachedVisits();
+
   Future<List<MedicalVisit>> getVisits();
 
   Future<void> saveVisit(MedicalVisit visit);

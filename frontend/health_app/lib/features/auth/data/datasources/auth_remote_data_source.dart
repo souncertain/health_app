@@ -7,9 +7,17 @@ import '../models/auth_session_model.dart';
 
 class AuthRemoteDataSource {
   AuthRemoteDataSource({HttpClient? httpClient})
-    : _httpClient = httpClient ?? HttpClient();
+    : _httpClient = httpClient ?? _sharedHttpClient;
 
   final HttpClient _httpClient;
+
+  static final HttpClient _sharedHttpClient = () {
+    final client = HttpClient();
+    client.idleTimeout = const Duration(minutes: 2);
+    client.connectionTimeout = const Duration(seconds: 10);
+    client.maxConnectionsPerHost = 4;
+    return client;
+  }();
 
   Future<AuthSessionModel> register({
     required String email,
@@ -31,6 +39,38 @@ class AuthRemoteDataSource {
     );
   }
 
+  Future<AuthSessionModel> signInWithGoogle({
+    required String idToken,
+    String? deviceId,
+    String? deviceName,
+  }) {
+    return _postSession(
+      path: '/api/auth/google',
+      payload: {
+        'idToken': idToken.trim(),
+        if (deviceId?.trim().isNotEmpty ?? false) 'deviceId': deviceId!.trim(),
+        if (deviceName?.trim().isNotEmpty ?? false)
+          'deviceName': deviceName!.trim(),
+      },
+    );
+  }
+
+  Future<AuthSessionModel> signInWithYandex({
+    required String accessToken,
+    String? deviceId,
+    String? deviceName,
+  }) {
+    return _postSession(
+      path: '/api/auth/yandex',
+      payload: {
+        'accessToken': accessToken.trim(),
+        if (deviceId?.trim().isNotEmpty ?? false) 'deviceId': deviceId!.trim(),
+        if (deviceName?.trim().isNotEmpty ?? false)
+          'deviceName': deviceName!.trim(),
+      },
+    );
+  }
+
   Future<AuthSessionModel> refresh({
     required String refreshToken,
     required String refreshSessionId,
@@ -40,6 +80,28 @@ class AuthRemoteDataSource {
       payload: {
         'refreshToken': refreshToken,
         'refreshSessionId': refreshSessionId,
+      },
+    );
+  }
+
+  Future<void> requestPasswordReset({required String email}) {
+    return _postWithoutResponse(
+      path: '/api/auth/forgot-password',
+      payload: {'email': email.trim()},
+    );
+  }
+
+  Future<void> resetPassword({
+    required String email,
+    required String code,
+    required String newPassword,
+  }) {
+    return _postWithoutResponse(
+      path: '/api/auth/reset-password',
+      payload: {
+        'email': email.trim(),
+        'code': code.trim(),
+        'newPassword': newPassword,
       },
     );
   }

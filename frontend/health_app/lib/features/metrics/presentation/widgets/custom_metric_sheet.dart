@@ -204,7 +204,9 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
               hintText: 'напр. 3.5',
               controller: _targetMinController,
               accentColor: const Color(0xFF8B38F6),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               validator: decimalNumberValidator,
             ),
             const SizedBox(height: 20),
@@ -213,7 +215,9 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
               hintText: 'напр. 7.2',
               controller: _targetMaxController,
               accentColor: const Color(0xFF8B38F6),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               validator: decimalNumberValidator,
             ),
             const SizedBox(height: 28),

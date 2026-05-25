@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../../../../core/layout/app_layout_constants.dart';
 import '../../../../core/services/local_notifications_service.dart';
 import '../../data/datasources/profile_local_data_source.dart';
-import '../../data/repositories/local_profile_repository.dart';
+import '../../data/datasources/profile_remote_data_source.dart';
+import '../../data/repositories/backend_profile_repository.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/profile_repository.dart';
 import '../controllers/profile_controller.dart';
 import '../widgets/profile_edit_sheet.dart';
+import '../widgets/profile_field_edit_sheet.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.repository, required this.onSignOut});
@@ -27,7 +29,11 @@ class ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     final repository =
-        widget.repository ?? LocalProfileRepository(ProfileLocalDataSource());
+        widget.repository ??
+        BackendProfileRepository(
+          localDataSource: ProfileLocalDataSource(),
+          remoteDataSource: ProfileRemoteDataSource(),
+        );
     _controller = ProfileController(
       repository: repository,
       notifications: LocalNotificationsService.instance,
@@ -53,28 +59,143 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _editName() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'Имя и фамилия',
+      label: 'Имя и фамилия',
+      hintText: 'например, Иван Петров',
+      initialValue: _controller.profile.fullName,
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(fullName: value, updatedAt: DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> _editEmail() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'E-mail',
+      label: 'E-mail',
+      hintText: 'например, ivan@email.com',
+      initialValue: _controller.profile.email,
+      keyboardType: TextInputType.emailAddress,
+      validator: _emailValidator,
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(email: value, updatedAt: DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> _editHeight() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'Рост',
+      label: 'Рост (см)',
+      hintText: '180',
+      initialValue: _controller.profile.heightCm?.toString() ?? '',
+      keyboardType: TextInputType.number,
+      validator: _optionalPositiveIntValidator,
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(
+          heightCm: _parseIntOrNull(value),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editWeight() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'Вес',
+      label: 'Вес (кг)',
+      hintText: '80',
+      initialValue: _controller.profile.weightKg == null
+          ? ''
+          : _formatWeight(_controller.profile.weightKg!),
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      validator: _optionalPositiveDoubleValidator,
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(
+          weightKg: _parseDoubleOrNull(value),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editPrimaryDoctor() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'Основной врач',
+      label: 'Основной врач',
+      hintText: 'например, д-р Иван Петров',
+      initialValue: _controller.profile.primaryDoctor ?? '',
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(
+          primaryDoctor: _normalizeText(value),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editBloodType() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'Группа крови',
+      label: 'Группа крови',
+      hintText: 'A+',
+      initialValue: _controller.profile.bloodType ?? '',
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(
+          bloodType: _normalizeText(value),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editEmergencyContact() {
+    return showEmergencyContactEditSheet(
+      context: context,
+      initialName: _controller.profile.emergencyContactName ?? '',
+      initialDetails: _controller.profile.emergencyContactDetails ?? '',
+      onSubmit: (name, details) => _savePatchedProfile(
+        _controller.profile.copyWith(
+          emergencyContactName: _normalizeText(name),
+          emergencyContactDetails: _normalizeText(details),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _savePatchedProfile(UserProfile profile) {
+    return _controller.saveProfile(profile);
+  }
+
   Future<void> _signOut() async {
     final shouldSignOut =
         await showDialog<bool>(
           context: context,
-          builder: (context) {
-            return AlertDialog(
-              title: const Text('Выйти из аккаунта?'),
-              content: const Text(
-                'Мы завершим текущую сессию и очистим локальные данные этого пользователя на устройстве.',
+          builder: (context) => AlertDialog(
+            title: const Text('Выйти из аккаунта?'),
+            content: const Text(
+              'Мы завершим текущую сессию и очистим локальные данные этого пользователя на устройстве.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Отмена'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('Отмена'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Выйти'),
-                ),
-              ],
-            );
-          },
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Выйти'),
+              ),
+            ],
+          ),
         ) ??
         false;
 
@@ -82,17 +203,12 @@ class ProfilePageState extends State<ProfilePage> {
       return;
     }
 
-    setState(() {
-      _isSigningOut = true;
-    });
-
+    setState(() => _isSigningOut = true);
     try {
       await widget.onSignOut();
     } finally {
       if (mounted) {
-        setState(() {
-          _isSigningOut = false;
-        });
+        setState(() => _isSigningOut = false);
       }
     }
   }
@@ -126,12 +242,17 @@ class ProfilePageState extends State<ProfilePage> {
                 18,
                 16,
                 18,
-                52 + kPageBottomOverlayPadding,
+                16 + kPageBottomOverlayPadding,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ProfileHeader(profile: profile, onEdit: _openEditSheet),
+                  _ProfileHeader(
+                    profile: profile,
+                    onEdit: _openEditSheet,
+                    onEditName: _editName,
+                    onEditEmail: _editEmail,
+                  ),
                   const SizedBox(height: 14),
                   _StatsRow(stats: stats),
                   const SizedBox(height: 14),
@@ -146,6 +267,7 @@ class ProfilePageState extends State<ProfilePage> {
                         value: profile.heightCm == null
                             ? 'Не указано'
                             : '${profile.heightCm} см',
+                        onTap: _editHeight,
                       ),
                       _InfoRow(
                         icon: Icons.monitor_weight_outlined,
@@ -154,6 +276,7 @@ class ProfilePageState extends State<ProfilePage> {
                         value: profile.weightKg == null
                             ? 'Не указано'
                             : '${_formatWeight(profile.weightKg!)} кг',
+                        onTap: _editWeight,
                       ),
                       _InfoRow(
                         icon: Icons.favorite_rounded,
@@ -166,6 +289,7 @@ class ProfilePageState extends State<ProfilePage> {
                         iconColor: const Color(0xFF7C3AED),
                         label: 'Основной врач',
                         value: _valueOrPlaceholder(profile.primaryDoctor),
+                        onTap: _editPrimaryDoctor,
                       ),
                     ],
                   ),
@@ -179,8 +303,12 @@ class ProfilePageState extends State<ProfilePage> {
                         iconColor: const Color(0xFFEF4444),
                         label: 'Группа крови',
                         value: _valueOrPlaceholder(profile.bloodType),
+                        onTap: _editBloodType,
                       ),
-                      _EmergencyContactRow(profile: profile),
+                      _EmergencyContactRow(
+                        profile: profile,
+                        onTap: _editEmergencyContact,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -248,9 +376,7 @@ class ProfilePageState extends State<ProfilePage> {
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFFC0392B),
                         side: BorderSide(
-                          color: const Color(
-                            0xFFC0392B,
-                          ).withValues(alpha: 0.28),
+                          color: const Color(0xFFC0392B).withValues(alpha: 0.28),
                         ),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
@@ -271,17 +397,6 @@ class ProfilePageState extends State<ProfilePage> {
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Text(
-                      'HealthTrack v2.4.1',
-                      style: TextStyle(
-                        color: const Color(0xFF8FA1BC).withValues(alpha: 0.88),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
@@ -319,13 +434,67 @@ class ProfilePageState extends State<ProfilePage> {
         : 'Высокий';
     return '${bmi.toStringAsFixed(1)} · $label';
   }
+
+  String? _normalizeText(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  int? _parseIntOrNull(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : int.tryParse(trimmed);
+  }
+
+  double? _parseDoubleOrNull(String value) {
+    final trimmed = value.trim().replaceAll(',', '.');
+    return trimmed.isEmpty ? null : double.tryParse(trimmed);
+  }
+
+  String? _optionalPositiveIntValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final parsed = int.tryParse(trimmed);
+    if (parsed == null) {
+      return 'Введите число';
+    }
+    return parsed > 0 ? null : 'Значение должно быть больше нуля';
+  }
+
+  String? _optionalPositiveDoubleValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    final parsed = double.tryParse(trimmed.replaceAll(',', '.'));
+    if (parsed == null) {
+      return 'Введите число';
+    }
+    return parsed > 0 ? null : 'Значение должно быть больше нуля';
+  }
+
+  String? _emailValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+    return trimmed.contains('@') ? null : 'Введите корректный e-mail';
+  }
 }
 
 class _ProfileHeader extends StatelessWidget {
-  const _ProfileHeader({required this.profile, required this.onEdit});
+  const _ProfileHeader({
+    required this.profile,
+    required this.onEdit,
+    required this.onEditName,
+    required this.onEditEmail,
+  });
 
   final UserProfile profile;
   final VoidCallback onEdit;
+  final VoidCallback onEditName;
+  final VoidCallback onEditEmail;
 
   @override
   Widget build(BuildContext context) {
@@ -377,7 +546,7 @@ class _ProfileHeader extends StatelessWidget {
                 ),
                 icon: const Icon(Icons.edit_rounded, size: 16),
                 label: const Text(
-                  'Изменить',
+                  'Все поля',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
                 ),
               ),
@@ -413,32 +582,20 @@ class _ProfileHeader extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      profile.fullName.trim().isEmpty
+                    _HeaderEditableText(
+                      value: profile.fullName.trim().isEmpty
                           ? 'Пользователь'
                           : profile.fullName.trim(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        height: 1.15,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      secondary: false,
+                      onTap: onEditName,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      profile.email.trim().isEmpty
+                    const SizedBox(height: 6),
+                    _HeaderEditableText(
+                      value: profile.email.trim().isEmpty
                           ? 'Добавьте e-mail'
                           : profile.email.trim(),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.88),
-                        fontSize: 13.5,
-                        height: 1.25,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      secondary: true,
+                      onTap: onEditEmail,
                     ),
                     if (chips.isNotEmpty) ...[
                       const SizedBox(height: 10),
@@ -456,6 +613,54 @@ class _ProfileHeader extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _HeaderEditableText extends StatelessWidget {
+  const _HeaderEditableText({
+    required this.value,
+    required this.secondary,
+    required this.onTap,
+  });
+
+  final String value;
+  final bool secondary;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: secondary
+                      ? Colors.white.withValues(alpha: 0.88)
+                      : Colors.white,
+                  fontSize: secondary ? 13.5 : 18,
+                  height: secondary ? 1.25 : 1.15,
+                  fontWeight: secondary ? FontWeight.w500 : FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.edit_rounded,
+              size: secondary ? 16 : 18,
+              color: Colors.white.withValues(alpha: secondary ? 0.8 : 0.9),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -656,16 +861,18 @@ class _InfoRow extends StatelessWidget {
     required this.iconColor,
     required this.label,
     required this.value,
+    this.onTap,
   });
 
   final IconData icon;
   final Color iconColor;
   final String label;
   final String value;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 9),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -693,29 +900,52 @@ class _InfoRow extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: Text(
-                value,
-                textAlign: TextAlign.end,
-                style: const TextStyle(
-                  color: Color(0xFF12203F),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    value,
+                    textAlign: TextAlign.end,
+                    style: const TextStyle(
+                      color: Color(0xFF12203F),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
-              ),
+                if (onTap != null) ...[
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF8FA1BC),
+                  ),
+                ],
+              ],
             ),
           ),
         ],
       ),
     );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: content,
+    );
   }
 }
 
 class _EmergencyContactRow extends StatelessWidget {
-  const _EmergencyContactRow({required this.profile});
+  const _EmergencyContactRow({required this.profile, required this.onTap});
 
   final UserProfile profile;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -723,85 +953,100 @@ class _EmergencyContactRow extends StatelessWidget {
         (profile.emergencyContactName?.trim().isNotEmpty ?? false) ||
         (profile.emergencyContactDetails?.trim().isNotEmpty ?? false);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 9),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: const Icon(
-              Icons.emergency_outlined,
-              color: Color(0xFF8B5CF6),
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          const SizedBox(
-            width: 112,
-            child: Text(
-              'Экстренный контакт',
-              style: TextStyle(
-                color: Color(0xFF61738F),
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.emergency_outlined,
+                color: Color(0xFF8B5CF6),
+                size: 20,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Align(
-              alignment: Alignment.topRight,
-              child: hasContact
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if ((profile.emergencyContactName?.trim().isNotEmpty ??
-                            false))
-                          Text(
-                            profile.emergencyContactName!.trim(),
+            const SizedBox(width: 12),
+            const SizedBox(
+              width: 112,
+              child: Text(
+                'Экстренный контакт',
+                style: TextStyle(
+                  color: Color(0xFF61738F),
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: hasContact
+                        ? Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if ((profile.emergencyContactName
+                                      ?.trim()
+                                      .isNotEmpty ??
+                                  false))
+                                Text(
+                                  profile.emergencyContactName!.trim(),
+                                  textAlign: TextAlign.end,
+                                  style: const TextStyle(
+                                    color: Color(0xFF12203F),
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              if ((profile.emergencyContactDetails
+                                      ?.trim()
+                                      .isNotEmpty ??
+                                  false))
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 2),
+                                  child: Text(
+                                    profile.emergencyContactDetails!.trim(),
+                                    textAlign: TextAlign.end,
+                                    style: const TextStyle(
+                                      color: Color(0xFF8FA1BC),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          )
+                        : const Text(
+                            'Не указано',
                             textAlign: TextAlign.end,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Color(0xFF12203F),
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                        if ((profile.emergencyContactDetails
-                                ?.trim()
-                                .isNotEmpty ??
-                            false))
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              profile.emergencyContactDetails!.trim(),
-                              textAlign: TextAlign.end,
-                              style: const TextStyle(
-                                color: Color(0xFF8FA1BC),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                      ],
-                    )
-                  : const Text(
-                      'Не указано',
-                      textAlign: TextAlign.end,
-                      style: TextStyle(
-                        color: Color(0xFF12203F),
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.chevron_right_rounded,
+                    color: Color(0xFF8FA1BC),
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

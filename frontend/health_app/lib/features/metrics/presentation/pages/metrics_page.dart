@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout_constants.dart';
 import '../../data/datasources/health_metrics_local_data_source.dart';
-import '../../data/repositories/local_health_metric_repository.dart';
+import '../../data/datasources/health_metrics_remote_data_source.dart';
+import '../../data/repositories/backend_health_metric_repository.dart';
 import '../../domain/entities/health_metric_item.dart';
 import '../../domain/repositories/health_metric_repository.dart';
 import '../../domain/usecases/delete_health_metric.dart';
+import '../../domain/usecases/get_cached_health_metrics.dart';
 import '../../domain/usecases/get_health_metrics.dart';
 import '../../domain/usecases/save_health_metric.dart';
 import '../controllers/metrics_controller.dart';
@@ -33,8 +35,12 @@ class MetricsPageState extends State<MetricsPage> {
     super.initState();
     final repository =
         widget.repository ??
-        LocalHealthMetricRepository(HealthMetricsLocalDataSource());
+        BackendHealthMetricRepository(
+          localDataSource: HealthMetricsLocalDataSource(),
+          remoteDataSource: HealthMetricsRemoteDataSource(),
+        );
     _controller = MetricsController(
+      getCachedMetrics: GetCachedHealthMetricsUseCase(repository),
       getMetrics: GetHealthMetricsUseCase(repository),
       saveMetric: SaveHealthMetricUseCase(repository),
       deleteMetric: DeleteHealthMetricUseCase(repository),
@@ -1053,22 +1059,37 @@ class _MetricHistoryChartState extends State<_MetricHistoryChart> {
             ),
           ),
           const SizedBox(height: 12),
-          Row(
-            children: widget.history
-                .map(
-                  (day) => Expanded(
-                    child: Text(
-                      _weekdayLabel(day.date.weekday),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF9AACCA),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              const labelWidth = 32.0;
+              return SizedBox(
+                height: 18,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: List<Widget>.generate(widget.history.length, (index) {
+                    final x = widget.history.length == 1
+                        ? constraints.maxWidth / 2
+                        : constraints.maxWidth * index / (widget.history.length - 1);
+                    final left = (x - (labelWidth / 2))
+                        .clamp(0.0, constraints.maxWidth - labelWidth)
+                        .toDouble();
+                    return Positioned(
+                      left: left,
+                      width: labelWidth,
+                      child: Text(
+                        _weekdayLabel(widget.history[index].date.weekday),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Color(0xFF9AACCA),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
-                  ),
-                )
-                .toList(),
+                    );
+                  }),
+                ),
+              );
+            },
           ),
           if (!widget.hasRenderableHistory) ...[
             const SizedBox(height: 10),

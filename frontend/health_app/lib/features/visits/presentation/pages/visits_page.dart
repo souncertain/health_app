@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../core/layout/app_layout_constants.dart';
 import '../../../../core/utils/date_time_labels.dart';
 import '../../data/datasources/medical_visits_local_data_source.dart';
-import '../../data/repositories/local_medical_visit_repository.dart';
+import '../../data/datasources/medical_visits_remote_data_source.dart';
+import '../../data/repositories/backend_medical_visit_repository.dart';
 import '../../domain/entities/medical_visit.dart';
 import '../../domain/repositories/medical_visit_repository.dart';
 import '../../domain/usecases/delete_medical_visit.dart';
+import '../../domain/usecases/get_cached_medical_visits.dart';
 import '../../domain/usecases/get_medical_visits.dart';
 import '../../domain/usecases/save_medical_visit.dart';
 import '../controllers/visits_controller.dart';
@@ -30,8 +32,12 @@ class VisitsPageState extends State<VisitsPage> {
     super.initState();
     final repository =
         widget.repository ??
-        LocalMedicalVisitRepository(MedicalVisitsLocalDataSource());
+        BackendMedicalVisitRepository(
+          localDataSource: MedicalVisitsLocalDataSource(),
+          remoteDataSource: MedicalVisitsRemoteDataSource(),
+        );
     _controller = VisitsController(
+      getCachedVisits: GetCachedMedicalVisitsUseCase(repository),
       getVisits: GetMedicalVisitsUseCase(repository),
       saveVisit: SaveMedicalVisitUseCase(repository),
       deleteVisit: DeleteMedicalVisitUseCase(repository),

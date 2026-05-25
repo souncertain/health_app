@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../../core/services/local_notifications_service.dart';
@@ -6,8 +8,10 @@ import '../../../dashboard/domain/entities/blood_pressure_reading.dart';
 import '../../../meds/data/datasources/medication_local_data_source.dart';
 import '../../../metrics/data/datasources/health_metrics_local_data_source.dart';
 import '../../../visits/data/datasources/medical_visits_local_data_source.dart';
+import '../../domain/entities/profile_stats_snapshot.dart';
 import '../../domain/entities/user_profile.dart';
 import '../../domain/repositories/profile_repository.dart';
+import '../../domain/repositories/profile_stats_repository.dart';
 
 class ProfileStats {
   const ProfileStats({
@@ -22,6 +26,15 @@ class ProfileStats {
       medicationsCount = 0,
       appointmentsCount = 0,
       daysTracked = 0;
+
+  factory ProfileStats.fromSnapshot(ProfileStatsSnapshot snapshot) {
+    return ProfileStats(
+      bpReadingsCount: snapshot.bloodPressureReadingsCount,
+      medicationsCount: snapshot.medicationsCount,
+      appointmentsCount: snapshot.appointmentsCount,
+      daysTracked: snapshot.daysTracked,
+    );
+  }
 
   final int bpReadingsCount;
   final int medicationsCount;
@@ -70,31 +83,54 @@ class ProfileController extends ChangeNotifier {
     if (_initialized) {
       return;
     }
+
     _initialized = true;
-    await refresh();
+    await _loadCached();
+    unawaited(refresh(showLoading: !_hasVisibleProfileData));
   }
 
-  Future<void> refresh() async {
-    _isLoading = true;
+  Future<void> refresh({bool showLoading = true}) async {
+    if (showLoading) {
+      _isLoading = true;
+    }
     notifyListeners();
 
     try {
       _profile = await _repository.getProfile() ?? UserProfile.empty();
-      _stats = await _buildStats();
+      if (_repository is ProfileStatsRepository) {
+        _stats = ProfileStats.fromSnapshot(
+          await (_repository as ProfileStatsRepository).getProfileStats(),
+        );
+      } else {
+        _stats = await _buildStats();
+      }
     } finally {
-      _isLoading = false;
+      if (showLoading) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }
 
   Future<void> saveProfile(UserProfile profile) async {
     _isSaving = true;
+    final previousProfile = _profile;
+    _profile = profile;
     notifyListeners();
 
     try {
       await _repository.saveProfile(profile);
-      _profile = profile;
-      _stats = await _buildStats();
+      _profile = await _repository.getCachedProfile() ?? profile;
+      if (_repository is ProfileStatsRepository) {
+        _stats = ProfileStats.fromSnapshot(
+          await (_repository as ProfileStatsRepository).getProfileStats(),
+        );
+      } else {
+        _stats = await _buildStats();
+      }
+    } catch (_) {
+      _profile = previousProfile;
+      rethrow;
     } finally {
       _isSaving = false;
       notifyListeners();
@@ -107,15 +143,17 @@ class ProfileController extends ChangeNotifier {
     }
 
     _isSaving = true;
+    final previousProfile = _profile;
+    _profile = _profile.copyWith(
+      notificationsEnabled: enabled,
+      updatedAt: DateTime.now(),
+    );
     notifyListeners();
 
     try {
-      final updatedProfile = _profile.copyWith(
-        notificationsEnabled: enabled,
-        updatedAt: DateTime.now(),
-      );
+      final updatedProfile = _profile;
       await _repository.saveProfile(updatedProfile);
-      _profile = updatedProfile;
+      _profile = await _repository.getCachedProfile() ?? updatedProfile;
 
       if (enabled) {
         final medications = await _medicationLocalDataSource.getMedications();
@@ -125,10 +163,44 @@ class ProfileController extends ChangeNotifier {
       } else {
         await _notifications.cancelAllNotifications();
       }
+    } catch (_) {
+      _profile = previousProfile;
+      rethrow;
     } finally {
       _isSaving = false;
       notifyListeners();
     }
+  }
+
+  Future<void> _loadCached() async {
+    try {
+      _profile = await _repository.getCachedProfile() ?? UserProfile.empty();
+      if (_repository is ProfileStatsRepository) {
+        _stats = ProfileStats.fromSnapshot(
+          await (_repository as ProfileStatsRepository).getProfileStats(),
+        );
+      } else {
+        _stats = await _buildStats();
+      }
+    } catch (_) {
+      // Keep empty state if cache loading fails.
+    }
+
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  bool get _hasVisibleProfileData {
+    return _profile.fullName.trim().isNotEmpty ||
+        _profile.email.trim().isNotEmpty ||
+        (_profile.primaryDoctor?.trim().isNotEmpty ?? false) ||
+        (_profile.bloodType?.trim().isNotEmpty ?? false) ||
+        (_profile.emergencyContactName?.trim().isNotEmpty ?? false) ||
+        (_profile.emergencyContactDetails?.trim().isNotEmpty ?? false) ||
+        _profile.heightCm != null ||
+        _profile.weightKg != null ||
+        _profile.age != null ||
+        _profile.remoteId?.trim().isNotEmpty == true;
   }
 
   Future<ProfileStats> _buildStats() async {

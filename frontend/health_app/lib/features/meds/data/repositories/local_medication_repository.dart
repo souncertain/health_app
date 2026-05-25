@@ -9,6 +9,11 @@ class LocalMedicationRepository implements MedicationRepository {
   final MedicationLocalDataSource _localDataSource;
 
   @override
+  Future<List<Medication>> getCachedMedications() {
+    return getMedications();
+  }
+
+  @override
   Future<void> deleteMedication(String id) async {
     final medications = await _localDataSource.getMedications();
     final updated = medications
@@ -43,6 +48,23 @@ class LocalMedicationRepository implements MedicationRepository {
       (left, right) =>
           left.timesInMinutes.first.compareTo(right.timesInMinutes.first),
     );
+    await _localDataSource.saveAll(medications);
+  }
+
+  @override
+  Future<void> setMedicationDailyStatus(
+    String medicationId,
+    DateTime date,
+    MedicationDayStatus? status,
+  ) async {
+    final medications = await _localDataSource.getMedications();
+    final index = medications.indexWhere((item) => item.id == medicationId);
+    if (index == -1) {
+      return;
+    }
+
+    final updated = medications[index].copyWithStatusForDate(date, status);
+    medications[index] = MedicationModel.fromEntity(updated);
     await _localDataSource.saveAll(medications);
   }
 }

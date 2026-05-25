@@ -20,6 +20,7 @@ namespace Data
         public DbSet<User> Users { get; set; } = null!;
         public DbSet<AuthRefreshSession> AuthRefreshSessions { get; set; } = null!;
         public DbSet<ExternalAuthAccount> ExternalAuthAccounts { get; set; } = null!;
+        public DbSet<AuthOneTimeCode> AuthOneTimeCodes { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -62,6 +63,12 @@ namespace Data
 
             modelBuilder.Entity<AuthRefreshSession>()
                 .HasIndex(x => x.ExpiresAt);
+
+            modelBuilder.Entity<AuthOneTimeCode>()
+                .HasIndex(x => new { x.UserId, x.Purpose, x.ExpiresAt });
+
+            modelBuilder.Entity<AuthOneTimeCode>()
+                .HasIndex(x => new { x.Email, x.Purpose });
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

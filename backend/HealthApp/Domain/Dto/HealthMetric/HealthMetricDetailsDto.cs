@@ -1,4 +1,5 @@
-﻿using Enums;
+using Domain.Dto.MetricRecords;
+using Enums;
 
 namespace Domain.Dto.HealthMetric
 {
@@ -14,5 +15,6 @@ namespace Domain.Dto.HealthMetric
         public bool IsCustom { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }
+        public List<MetricRecordDetailsDto> Records { get; set; } = new();
     }
 }

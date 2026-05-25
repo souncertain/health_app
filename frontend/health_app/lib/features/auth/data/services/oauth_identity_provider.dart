@@ -1,124 +1,169 @@
 import 'dart:convert';
-import 'dart:math';
 
 import 'package:flutter_appauth/flutter_appauth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/auth_exception.dart';
 import '../../domain/entities/auth_session.dart';
+import '../models/provider_authorization_grant.dart';
 
 class OAuthIdentityProvider {
-  OAuthIdentityProvider({FlutterAppAuth? appAuth})
-    : _appAuth = appAuth ?? const FlutterAppAuth();
+  OAuthIdentityProvider({
+    FlutterAppAuth? appAuth,
+    GoogleSignIn? googleSignIn,
+  }) : _appAuth = appAuth ?? const FlutterAppAuth(),
+       _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   final FlutterAppAuth _appAuth;
+  final GoogleSignIn _googleSignIn;
+
+  bool _isGoogleInitialized = false;
 
   static const _redirectUri = String.fromEnvironment(
     'AUTH_REDIRECT_URI',
     defaultValue: 'com.healthtrack.app:/oauth2redirect',
   );
-  static const _googleClientId = String.fromEnvironment(
-    'GOOGLE_OAUTH_CLIENT_ID',
+  static const _googleServerClientId = String.fromEnvironment(
+    'GOOGLE_SERVER_CLIENT_ID',
+    defaultValue: String.fromEnvironment('GOOGLE_OAUTH_CLIENT_ID'),
+  );
+  static const _googleIosClientId = String.fromEnvironment(
+    'GOOGLE_IOS_CLIENT_ID',
   );
   static const _yandexClientId = String.fromEnvironment(
     'YANDEX_OAUTH_CLIENT_ID',
   );
 
-  Future<AuthSession> signIn(AuthProvider provider) async {
+  Future<ProviderAuthorizationGrant> authorize(AuthProvider provider) {
     switch (provider) {
       case AuthProvider.google:
-        return _signInGoogle();
+        return _authorizeGoogle();
       case AuthProvider.yandex:
-        return _signInYandex();
+        return _authorizeYandex();
       case AuthProvider.password:
-        throw const AuthException('Этот способ не использует OAuth.');
+        throw const AuthException('This sign-in method does not use OAuth.');
     }
   }
 
-  Future<AuthSession> _signInGoogle() async {
-    if (_googleClientId.isEmpty) {
+  Future<void> signOut() async {
+    try {
+      if (_isGoogleInitialized) {
+        await _googleSignIn.signOut();
+      }
+    } catch (_) {
+      return;
+    }
+  }
+
+  Future<ProviderAuthorizationGrant> _authorizeGoogle() async {
+    if (_googleServerClientId.isEmpty) {
       throw const AuthException(
-        'Для Google OAuth нужно указать GOOGLE_OAUTH_CLIENT_ID.',
+        'Set GOOGLE_SERVER_CLIENT_ID before using Google sign-in.',
       );
     }
 
-    final response = await _appAuth.authorizeAndExchangeCode(
-      AuthorizationTokenRequest(
-        _googleClientId,
-        _redirectUri,
-        discoveryUrl:
-            'https://accounts.google.com/.well-known/openid-configuration',
-        scopes: const ['openid', 'email', 'profile'],
-        promptValues: const ['select_account'],
-      ),
-    );
+    try {
+      await _ensureGoogleInitialized();
+      final account = await _googleSignIn.authenticate();
+      final authentication = account.authentication;
+      final idToken = authentication.idToken?.trim() ?? '';
 
-    if (response.accessToken == null) {
-      throw const AuthException('Не удалось завершить вход через Google.');
+      if (idToken.isEmpty) {
+        throw const AuthException(
+          'Google did not return an ID token for backend sign-in.',
+        );
+      }
+
+      return ProviderAuthorizationGrant(
+        provider: AuthProvider.google,
+        idToken: idToken,
+        email: account.email.trim(),
+        displayName: account.displayName?.trim(),
+      );
+    } on GoogleSignInException catch (error) {
+      switch (error.code) {
+        case GoogleSignInExceptionCode.canceled:
+          throw const AuthException('Google sign-in was canceled.');
+        case GoogleSignInExceptionCode.clientConfigurationError:
+        case GoogleSignInExceptionCode.providerConfigurationError:
+          throw const AuthException(
+            'Google sign-in is not configured correctly. Check client IDs, package name, and SHA fingerprint.',
+          );
+        default:
+          final description = error.description?.trim() ?? '';
+          throw AuthException(
+            description.isNotEmpty
+                ? description
+                : 'Could not complete Google sign-in.',
+          );
+      }
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException('Could not complete Google sign-in.');
     }
-
-    return _sessionFromTokenResponse(
-      provider: AuthProvider.google,
-      response: response,
-      fallbackName: 'Пользователь Google',
-    );
   }
 
-  Future<AuthSession> _signInYandex() async {
+  Future<ProviderAuthorizationGrant> _authorizeYandex() async {
     if (_yandexClientId.isEmpty) {
       throw const AuthException(
-        'Для Яндекс OAuth нужно указать YANDEX_OAUTH_CLIENT_ID.',
+        'Set YANDEX_OAUTH_CLIENT_ID before using Yandex sign-in.',
       );
     }
 
-    final response = await _appAuth.authorizeAndExchangeCode(
-      AuthorizationTokenRequest(
-        _yandexClientId,
-        _redirectUri,
-        serviceConfiguration: const AuthorizationServiceConfiguration(
-          authorizationEndpoint: 'https://oauth.yandex.com/authorize',
-          tokenEndpoint: 'https://oauth.yandex.com/token',
+    try {
+      final response = await _appAuth.authorizeAndExchangeCode(
+        AuthorizationTokenRequest(
+          _yandexClientId,
+          _redirectUri,
+          serviceConfiguration: const AuthorizationServiceConfiguration(
+            authorizationEndpoint: 'https://oauth.yandex.com/authorize',
+            tokenEndpoint: 'https://oauth.yandex.com/token',
+          ),
+          scopes: const ['login:info', 'login:email'],
         ),
-        scopes: const ['login:info', 'login:email'],
-      ),
-    );
+      );
 
-    if (response.accessToken == null) {
-      throw const AuthException('Не удалось завершить вход через Яндекс.');
+      final accessToken = response.accessToken?.trim() ?? '';
+      if (accessToken.isEmpty) {
+        throw const AuthException('Yandex did not return an access token.');
+      }
+
+      final claims = _decodeJwtClaims(response.idToken);
+      final name = (claims?['name'] as String?)?.trim() ?? '';
+
+      return ProviderAuthorizationGrant(
+        provider: AuthProvider.yandex,
+        accessToken: accessToken,
+        email: (claims?['email'] as String?)?.trim(),
+        displayName: name.isEmpty ? 'Yandex user' : name,
+      );
+    } on FlutterAppAuthUserCancelledException {
+      throw const AuthException('Yandex sign-in was canceled.');
+    } on FlutterAppAuthPlatformException catch (error) {
+      final message = error.message?.trim() ?? '';
+      throw AuthException(
+        message.isNotEmpty
+            ? message
+            : 'Could not complete Yandex sign-in.',
+      );
+    } on AuthException {
+      rethrow;
+    } catch (_) {
+      throw const AuthException('Could not complete Yandex sign-in.');
     }
-
-    return _sessionFromTokenResponse(
-      provider: AuthProvider.yandex,
-      response: response,
-      fallbackName: 'Пользователь Яндекса',
-    );
   }
 
-  AuthSession _sessionFromTokenResponse({
-    required AuthProvider provider,
-    required AuthorizationTokenResponse response,
-    required String fallbackName,
-  }) {
-    final claims = _decodeJwtClaims(response.idToken);
-    final email = (claims?['email'] as String?)?.trim() ?? '';
-    final name =
-        ((claims?['name'] as String?) ??
-                (claims?['given_name'] as String?) ??
-                fallbackName)
-            .trim();
+  Future<void> _ensureGoogleInitialized() async {
+    if (_isGoogleInitialized) {
+      return;
+    }
 
-    return AuthSession(
-      userId: (claims?['sub'] as String?) ?? _randomIdentifier(),
-      displayName: name.isEmpty ? fallbackName : name,
-      email: email,
-      provider: provider,
-      accessToken: response.accessToken ?? '',
-      refreshToken: response.refreshToken ?? '',
-      issuedAt: DateTime.now(),
-      accessTokenExpiresAt: response.accessTokenExpirationDateTime,
-      refreshSessionId: response.refreshToken == null
-          ? null
-          : _randomIdentifier(),
+    await _googleSignIn.initialize(
+      clientId: _googleIosClientId.isEmpty ? null : _googleIosClientId,
+      serverClientId: _googleServerClientId,
     );
+    _isGoogleInitialized = true;
   }
 
   Map<String, dynamic>? _decodeJwtClaims(String? token) {
@@ -138,13 +183,5 @@ class OAuthIdentityProvider {
     } catch (_) {
       return null;
     }
-  }
-
-  String _randomIdentifier() {
-    final random = Random.secure();
-    return List.generate(
-      24,
-      (_) => random.nextInt(16).toRadixString(16),
-    ).join();
   }
 }

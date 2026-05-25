@@ -34,19 +34,26 @@ class MedicalVisitModel extends MedicalVisit {
   }
 
   factory MedicalVisitModel.fromJson(Map<String, dynamic> json) {
+    final parsedAppointmentDate = DateTime.parse(
+      json['appointmentDate'] as String,
+    );
     return MedicalVisitModel(
       id: json['id'] as String,
       doctorName: json['doctorName'] as String,
       specialty: json['specialty'] as String,
-      appointmentDate: DateTime.parse(json['appointmentDate'] as String),
+      appointmentDate: MedicalVisit.normalizeDate(
+        parsedAppointmentDate.isUtc
+            ? parsedAppointmentDate.toLocal()
+            : parsedAppointmentDate,
+      ),
       timeInMinutes: json['timeInMinutes'] as int,
       location: json['location'] as String,
       visitType: MedicalVisitType.values.firstWhere(
         (value) => value.name == json['visitType'],
       ),
       rating: (json['rating'] as num).toDouble(),
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: _parseTimestamp(json['createdAt'] as String),
+      updatedAt: _parseTimestamp(json['updatedAt'] as String),
       remoteId: json['remoteId'] as String?,
       syncState: MedicalVisitSyncState.values.firstWhere(
         (value) => value.name == json['syncState'],
@@ -71,4 +78,9 @@ class MedicalVisitModel extends MedicalVisit {
       'syncState': syncState.name,
     };
   }
+}
+
+DateTime _parseTimestamp(String raw) {
+  final parsed = DateTime.parse(raw);
+  return parsed.isUtc ? parsed.toLocal() : parsed;
 }
