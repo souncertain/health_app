@@ -19,9 +19,24 @@ namespace HealthApp.Controllers
 
         [AllowAnonymous]
         [HttpPost("register")]
-        public Task<AuthSessionDto> Register([FromBody] AuthRegisterDto dto, CancellationToken ct)
+        public Task<AuthRegisterResultDto> Register([FromBody] AuthRegisterDto dto, CancellationToken ct)
         {
             return _authService.Register(dto, ct);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("confirm-email")]
+        public Task<AuthSessionDto> ConfirmEmail([FromBody] AuthConfirmEmailDto dto, CancellationToken ct)
+        {
+            return _authService.ConfirmEmail(dto, ct);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmation([FromBody] AuthResendEmailConfirmationDto dto, CancellationToken ct)
+        {
+            await _authService.ResendEmailConfirmation(dto, ct);
+            return NoContent();
         }
 
         [AllowAnonymous]

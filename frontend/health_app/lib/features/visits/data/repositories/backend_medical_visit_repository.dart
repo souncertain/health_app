@@ -1,4 +1,5 @@
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/collection_extensions.dart';
 import '../../domain/entities/medical_visit.dart';
 import '../../domain/repositories/medical_visit_repository.dart';
 import '../datasources/medical_visits_local_data_source.dart';
@@ -46,12 +47,10 @@ class BackendMedicalVisitRepository implements MedicalVisitRepository {
 
     final localVersion = savedRemote.copyWith(id: visit.id);
     final visits = await _localDataSource.getVisits();
-    final index = visits.indexWhere((item) => item.id == visit.id);
-    if (index == -1) {
-      visits.add(MedicalVisitModel.fromEntity(localVersion));
-    } else {
-      visits[index] = MedicalVisitModel.fromEntity(localVersion);
-    }
+    visits.upsertWhere(
+      MedicalVisitModel.fromEntity(localVersion),
+      (item) => item.id == visit.id,
+    );
 
     await _localDataSource.saveAll(
       _sort(visits).map(MedicalVisitModel.fromEntity).toList(),
@@ -61,10 +60,7 @@ class BackendMedicalVisitRepository implements MedicalVisitRepository {
   @override
   Future<void> deleteVisit(String id) async {
     final visits = await _localDataSource.getVisits();
-    final target = visits
-        .where((item) => item.id == id)
-        .cast<MedicalVisit?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+    final target = visits.firstWhereOrNull((item) => item.id == id);
 
     if (target == null) {
       return;
@@ -84,9 +80,7 @@ class BackendMedicalVisitRepository implements MedicalVisitRepository {
     List<MedicalVisitModel> localVisits,
   ) {
     final existing = localVisits
-        .where((item) => item.remoteId == remoteVisit.remoteId)
-        .cast<MedicalVisit?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+        .firstWhereOrNull((item) => item.remoteId == remoteVisit.remoteId);
 
     return remoteVisit.copyWith(id: existing?.id ?? remoteVisit.id);
   }

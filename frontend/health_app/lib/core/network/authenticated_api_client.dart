@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../config/app_config.dart';
-import '../../features/auth/domain/auth_exception.dart';
 import '../../features/auth/data/datasources/auth_local_data_source.dart';
 import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/models/auth_session_model.dart';
+import '../../features/auth/domain/auth_exception.dart';
 import 'api_exception.dart';
 
 class AuthenticatedApiClient {
@@ -175,9 +175,24 @@ class AuthenticatedApiClient {
       }
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        final message = decoded is Map<String, dynamic>
-            ? decoded['message'] as String?
-            : null;
+        final payloadMap = decoded is Map<String, dynamic> ? decoded : null;
+        final message = payloadMap?['message'] as String?;
+        final uiMessage = _extractUiMessage(payloadMap);
+        final fieldErrors = _parseFieldErrors(payloadMap?['errors']);
+
+        if ((uiMessage?.isNotEmpty ?? false) || fieldErrors.isNotEmpty) {
+          throw ApiValidationException(
+            message ?? 'Validation failed.',
+            uiMessage:
+                uiMessage ??
+                _firstFieldError(fieldErrors) ??
+                message ??
+                'Validation failed.',
+            fieldErrors: fieldErrors,
+            statusCode: response.statusCode,
+          );
+        }
+
         throw ApiException(
           message ?? 'Request failed with status ${response.statusCode}.',
           statusCode: response.statusCode,
@@ -228,6 +243,51 @@ class AuthenticatedApiClient {
     }
 
     return jsonDecode(trimmed);
+  }
+
+  Map<String, List<String>> _parseFieldErrors(dynamic rawErrors) {
+    if (rawErrors is! Map) {
+      return const {};
+    }
+
+    final result = <String, List<String>>{};
+    for (final entry in rawErrors.entries) {
+      final key = '${entry.key}';
+      final value = entry.value;
+      if (value is List) {
+        result[key] = value.map((item) => '$item').toList();
+        continue;
+      }
+
+      if (value is String) {
+        result[key] = [value];
+      }
+    }
+
+    return result;
+  }
+
+  String? _firstFieldError(Map<String, List<String>> fieldErrors) {
+    for (final errors in fieldErrors.values) {
+      for (final error in errors) {
+        final trimmed = error.trim();
+        if (trimmed.isNotEmpty) {
+          return trimmed;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _extractUiMessage(Map<String, dynamic>? payload) {
+    final value = payload?['uiMessage'];
+    if (value is String) {
+      final trimmed = value.trim();
+      return trimmed.isEmpty ? null : trimmed;
+    }
+
+    return null;
   }
 
   bool _hasFreshAccessToken(AuthSessionModel session) {

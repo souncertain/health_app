@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../domain/auth_exception.dart';
 import '../../domain/entities/auth_session.dart';
 import '../controllers/auth_controller.dart';
+import '../widgets/email_confirmation_sheet.dart';
 import '../widgets/forgot_password_sheet.dart';
 
 class SignInPage extends StatefulWidget {
@@ -56,9 +58,9 @@ class _SignInPageState extends State<SignInPage> {
         password: _passwordController.text,
       );
     } on AuthException catch (error) {
-      _showMessage(error.message);
+      _showError(error, 'Не удалось авторизоваться. Попробуйте позже.');
     } catch (_) {
-      _showMessage('Could not sign in. Please try again.');
+      _showMessage('Не удалось авторизоваться. Попробуйте позже.');
     }
   }
 
@@ -68,14 +70,26 @@ class _SignInPageState extends State<SignInPage> {
     }
 
     try {
-      await widget.controller.registerWithPassword(
+      final result = await widget.controller.registerWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
+      if (!mounted) {
+        return;
+      }
+
+      _showMessage(
+        'На вашу электронную почту отправлен код подтверждения. Введите его, чтобы завершить регистрацию.',
+      );
+      await showEmailConfirmationSheet(
+        context,
+        controller: widget.controller,
+        email: result.email,
+      );
     } on AuthException catch (error) {
-      _showMessage(error.message);
+      _showError(error,'Не удалось создать аккаунт. Попробуйте ещё раз.');
     } catch (_) {
-      _showMessage('Could not create the account. Please try again.');
+      _showMessage('Не удалось создать аккаунт. Попробуйте ещё раз.');
     }
   }
 
@@ -83,14 +97,19 @@ class _SignInPageState extends State<SignInPage> {
     try {
       await widget.controller.signInWithProvider(provider);
     } on AuthException catch (error) {
-      _showMessage(error.message);
+      final providerName = switch (provider) {
+        AuthProvider.google => 'Google',
+        AuthProvider.yandex => 'Yandex',
+        AuthProvider.password => 'Email',
+      };
+      _showError(error, 'Не удалось войти с помощью $providerName. Попробуйте ещё раз.');
     } catch (_) {
       final providerName = switch (provider) {
         AuthProvider.google => 'Google',
         AuthProvider.yandex => 'Yandex',
-        AuthProvider.password => 'email',
+        AuthProvider.password => 'Email',
       };
-      _showMessage('Could not sign in with $providerName. Please try again.');
+      _showMessage('Не удалось войти с помощью $providerName. Попробуйте ещё раз.');
     }
   }
 
@@ -107,13 +126,21 @@ class _SignInPageState extends State<SignInPage> {
 
     _emailController.text = restoredEmail;
     _passwordController.clear();
-    _showMessage('Password updated. You can now sign in with the new password.');
+    _showMessage('Ваш пароль обновлён. Теперь вы можете войти с новым паролем..');
   }
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showError(Object error, String fallbackMessage) {
+    showAppErrorSnackBarForException(
+      context,
+      error,
+      fallbackMessage: fallbackMessage,
+    );
   }
 
   @override
@@ -186,69 +213,6 @@ class _SignInPageState extends State<SignInPage> {
                           letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Sign in or create an account',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF4F8A63),
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'The app now uses backend authentication and restores the session on the next launch.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF4F8A63),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.88),
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: const Color(0xFFD7F2DF),
-                            width: 1.5,
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x120C1C46),
-                              blurRadius: 22,
-                              offset: Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: const Row(
-                          children: [
-                            Icon(
-                              Icons.lock_clock_outlined,
-                              color: Color(0xFF1DB954),
-                            ),
-                            SizedBox(width: 14),
-                            Expanded(
-                              child: Text(
-                                'Use the same email and password form for both actions: Sign in checks an existing account, and Create account immediately sends registration to the backend.',
-                                style: TextStyle(
-                                  color: Color(0xFF176A37),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  height: 1.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 28),
                       const _SectionDivider(label: 'EMAIL AND PASSWORD'),
                       const SizedBox(height: 22),
@@ -267,7 +231,7 @@ class _SignInPageState extends State<SignInPage> {
                           fontWeight: FontWeight.w600,
                         ),
                         decoration: _inputDecoration(
-                          hintText: 'Enter your email',
+                          hintText: 'Почта',
                           prefixIcon: const Icon(
                             Icons.mail_outline_rounded,
                             color: Color(0xFF7BE39E),
@@ -276,10 +240,11 @@ class _SignInPageState extends State<SignInPage> {
                         validator: (value) {
                           final trimmed = value?.trim() ?? '';
                           if (trimmed.isEmpty) {
-                            return 'Enter your email';
+                            return 'Введите адрес электронной почты';
                           }
-                          if (!trimmed.contains('@')) {
-                            return 'Enter a valid email';
+                          final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                          if (!emailRegex.hasMatch(trimmed)) {
+                            return 'Неверный формат электронной почты';
                           }
                           return null;
                         },
@@ -297,7 +262,7 @@ class _SignInPageState extends State<SignInPage> {
                           fontWeight: FontWeight.w600,
                         ),
                         decoration: _inputDecoration(
-                          hintText: 'Enter your password',
+                          hintText: 'Пароль',
                           prefixIcon: const Icon(
                             Icons.lock_outline_rounded,
                             color: Color(0xFF7BE39E),
@@ -319,10 +284,11 @@ class _SignInPageState extends State<SignInPage> {
                         validator: (value) {
                           final trimmed = value?.trim() ?? '';
                           if (trimmed.isEmpty) {
-                            return 'Enter your password';
+                            return 'Введите пароль';
                           }
-                          if (trimmed.length < 6) {
-                            return 'Minimum 6 characters';
+                          final passwordRegex = RegExp(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{6,}$');
+                          if (!passwordRegex.hasMatch(trimmed)) {
+                            return 'Пароль должен содержать не меньше 6 символов';
                           }
                           return null;
                         },
@@ -335,7 +301,7 @@ class _SignInPageState extends State<SignInPage> {
                               ? null
                               : _openForgotPasswordFlow,
                           child: const Text(
-                            'Forgot password?',
+                            'Забыли пароль?',
                             style: TextStyle(
                               color: Color(0xFF1AA84D),
                               fontSize: 18,
@@ -378,7 +344,7 @@ class _SignInPageState extends State<SignInPage> {
                                   ),
                                 )
                               : const Text(
-                                  'Sign in',
+                                  'Войти',
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w800,
@@ -408,7 +374,7 @@ class _SignInPageState extends State<SignInPage> {
                             ),
                           ),
                           child: const Text(
-                            'Create account',
+                            'Создать аккаунт',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -425,7 +391,7 @@ class _SignInPageState extends State<SignInPage> {
                           foregroundColor: Color(0xFF4285F4),
                           label: 'G',
                         ),
-                        label: 'Continue with Google',
+                        label: 'Войти с помощью Google',
                         onTap: widget.controller.isSubmitting
                             ? null
                             : () => _submitProviderSignIn(AuthProvider.google),
@@ -439,21 +405,10 @@ class _SignInPageState extends State<SignInPage> {
                           foregroundColor: Color(0xFFFF0000),
                           label: 'Y',
                         ),
-                        label: 'Continue with Yandex',
+                        label: 'Войти с помощью Yandex',
                         onTap: widget.controller.isSubmitting
                             ? null
                             : () => _submitProviderSignIn(AuthProvider.yandex),
-                      ),
-                      const SizedBox(height: 18),
-                      const Text(
-                        'By continuing, you agree to the terms of use and the privacy policy of the service.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Color(0xFF8DB49A),
-                          fontSize: 13,
-                          height: 1.45,
-                          fontWeight: FontWeight.w500,
-                        ),
                       ),
                     ],
                   ),

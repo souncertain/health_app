@@ -1,8 +1,7 @@
-import 'dart:async';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/controllers/cache_first_collection_controller.dart';
+import '../../../../core/utils/collection_extensions.dart';
 import '../../domain/entities/health_metric_item.dart';
 import '../../domain/usecases/delete_health_metric.dart';
 import '../../domain/usecases/get_cached_health_metrics.dart';
@@ -16,7 +15,7 @@ class MetricHistoryDay {
   final double? value;
 }
 
-class MetricsController extends ChangeNotifier {
+class MetricsController extends CacheFirstCollectionController<HealthMetricItem> {
   MetricsController({
     required GetCachedHealthMetricsUseCase getCachedMetrics,
     required GetHealthMetricsUseCase getMetrics,
@@ -41,44 +40,23 @@ class MetricsController extends ChangeNotifier {
     MetricVisualStyle.redCircle,
   ];
 
-  bool _isLoading = false;
-  bool _isSaving = false;
-  String? _errorMessage;
-  List<HealthMetricItem> _metrics = const [];
-  bool _initialized = false;
+  List<HealthMetricItem> get metrics => List.unmodifiable(currentItems);
 
-  bool get isLoading => _isLoading;
-  bool get isSaving => _isSaving;
-  String? get errorMessage => _errorMessage;
-  List<HealthMetricItem> get metrics => List.unmodifiable(_metrics);
+  @override
+  String get refreshErrorMessage =>
+      'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РјРµС‚СЂРёРєРё.';
 
-  Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
+  @override
+  Future<List<HealthMetricItem>> loadCachedItems() => _getCachedMetrics();
 
-    _initialized = true;
-    await _loadCached();
-    unawaited(refresh(showLoading: _metrics.isEmpty));
-  }
+  @override
+  Future<List<HealthMetricItem>> loadRemoteItems() => _getMetrics();
 
-  Future<void> refresh({bool showLoading = true}) async {
-    if (showLoading) {
-      _isLoading = true;
-    }
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      _setMetrics(await _getMetrics());
-    } catch (_) {
-      _errorMessage = 'Не удалось загрузить метрики.';
-    } finally {
-      if (showLoading) {
-        _isLoading = false;
-      }
-      notifyListeners();
-    }
+  @override
+  List<HealthMetricItem> sortItems(List<HealthMetricItem> items) {
+    final sorted = List<HealthMetricItem>.from(items);
+    _sortInPlace(sorted);
+    return sorted;
   }
 
   Future<String> createCustomMetric({
@@ -88,7 +66,7 @@ class MetricsController extends ChangeNotifier {
     required double targetMax,
   }) async {
     final now = DateTime.now();
-    final customCount = _metrics.where((metric) => metric.isCustom).length;
+    final customCount = currentItems.where((metric) => metric.isCustom).length;
     final metric = HealthMetricItem(
       id: 'metric-${now.microsecondsSinceEpoch}',
       title: title,
@@ -103,11 +81,10 @@ class MetricsController extends ChangeNotifier {
       isCustom: true,
     );
 
-    await _persistMetric(
-      previousMetrics: _metrics,
-      nextMetrics: _upsertMetric(_metrics, metric),
-      metric: metric,
-      errorMessage: 'Не удалось создать метрику.',
+    await runOptimisticMutation(
+      nextItems: _upsertMetric(currentItems, metric),
+      action: () => _saveMetric(metric),
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕР·РґР°С‚СЊ РјРµС‚СЂРёРєСѓ.',
     );
     return metric.id;
   }
@@ -128,11 +105,10 @@ class MetricsController extends ChangeNotifier {
       updatedAt: now,
     );
 
-    await _persistMetric(
-      previousMetrics: _metrics,
-      nextMetrics: _upsertMetric(_metrics, updatedMetric),
-      metric: updatedMetric,
-      errorMessage: 'Не удалось обновить метрику.',
+    await runOptimisticMutation(
+      nextItems: _upsertMetric(currentItems, updatedMetric),
+      action: () => _saveMetric(updatedMetric),
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ РјРµС‚СЂРёРєСѓ.',
       rethrowOnFailure: true,
     );
   }
@@ -169,38 +145,26 @@ class MetricsController extends ChangeNotifier {
     }
 
     final updatedMetric = metric.copyWith(records: updatedRecords, updatedAt: now);
-    await _persistMetric(
-      previousMetrics: _metrics,
-      nextMetrics: _upsertMetric(_metrics, updatedMetric),
-      metric: updatedMetric,
-      errorMessage: 'Не удалось сохранить значение метрики.',
+    await runOptimisticMutation(
+      nextItems: _upsertMetric(currentItems, updatedMetric),
+      action: () => _saveMetric(updatedMetric),
+      errorMessage:
+          'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ Р·РЅР°С‡РµРЅРёРµ РјРµС‚СЂРёРєРё.',
       rethrowOnFailure: true,
     );
   }
 
   Future<void> deleteMetric(HealthMetricItem metric) async {
-    _isSaving = true;
-    _errorMessage = null;
-    final previousMetrics = _metrics;
-    _setMetrics(_metrics.where((item) => item.id != metric.id).toList());
-    notifyListeners();
-
-    try {
-      await _deleteMetric(metric.id);
-      await _reloadFromCache();
-    } catch (_) {
-      _setMetrics(previousMetrics);
-      _errorMessage = 'Не удалось удалить метрику.';
-      notifyListeners();
-      rethrow;
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
+    await runOptimisticMutation(
+      nextItems: currentItems.where((item) => item.id != metric.id).toList(),
+      action: () => _deleteMetric(metric.id),
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РјРµС‚СЂРёРєСѓ.',
+      rethrowOnFailure: true,
+    );
   }
 
   int countBySeverity(MetricSeverity severity) {
-    return _metrics
+    return currentItems
         .where((metric) => severityForMetric(metric) == severity)
         .length;
   }
@@ -293,76 +257,24 @@ class MetricsController extends ChangeNotifier {
         2;
   }
 
-  Future<void> _loadCached() async {
-    try {
-      _setMetrics(await _getCachedMetrics());
-    } catch (_) {
-      // Keep empty state if cache loading fails.
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> _persistMetric({
-    required List<HealthMetricItem> previousMetrics,
-    required List<HealthMetricItem> nextMetrics,
-    required HealthMetricItem metric,
-    required String errorMessage,
-    bool rethrowOnFailure = false,
-  }) async {
-    _isSaving = true;
-    _errorMessage = null;
-    _setMetrics(nextMetrics);
-    notifyListeners();
-
-    try {
-      await _saveMetric(metric);
-      await _reloadFromCache();
-    } catch (_) {
-      _setMetrics(previousMetrics);
-      _errorMessage = errorMessage;
-      if (rethrowOnFailure) {
-        rethrow;
-      }
-      notifyListeners();
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _reloadFromCache() async {
-    _setMetrics(await _getCachedMetrics());
-  }
-
   List<HealthMetricItem> _upsertMetric(
     List<HealthMetricItem> source,
     HealthMetricItem metric,
   ) {
     final updated = List<HealthMetricItem>.from(source);
-    final index = updated.indexWhere((item) => item.id == metric.id);
-    if (index == -1) {
-      updated.add(metric);
-    } else {
-      updated[index] = metric;
-    }
-
+    updated.upsertWhere(metric, (item) => item.id == metric.id);
     _sortInPlace(updated);
     return updated;
   }
 
-  void _setMetrics(List<HealthMetricItem> metrics) {
-    _metrics = List<HealthMetricItem>.from(metrics);
-    _sortInPlace(_metrics);
-  }
-
   void _sortInPlace(List<HealthMetricItem> metrics) {
     metrics.sort((left, right) {
-      if (left.isCustom != right.isCustom) {
-        return left.isCustom ? 1 : -1;
+      final updatedAtComparison = right.updatedAt.compareTo(left.updatedAt);
+      if (updatedAtComparison != 0) {
+        return updatedAtComparison;
       }
-      return left.createdAt.compareTo(right.createdAt);
+
+      return left.title.toLowerCase().compareTo(right.title.toLowerCase());
     });
   }
 }

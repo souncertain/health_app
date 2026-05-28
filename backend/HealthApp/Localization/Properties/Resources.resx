@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Field_Email" xml:space="preserve">
+    <value>электронная почта</value>
+  </data>
+  <data name="Field_Password" xml:space="preserve">
+    <value>пароль</value>
+  </data>
+  <data name="Field_NewPassword" xml:space="preserve">
+    <value>новый пароль</value>
+  </data>
+  <data name="Field_Phone" xml:space="preserve">
+    <value>телефон</value>
+  </data>
+  <data name="Field_DeviceId" xml:space="preserve">
+    <value>идентификатор устройства</value>
+  </data>
+  <data name="Field_DeviceName" xml:space="preserve">
+    <value>название устройства</value>
+  </data>
+  <data name="Field_GoogleIdToken" xml:space="preserve">
+    <value>токен Google</value>
+  </data>
+  <data name="Field_YandexAccessToken" xml:space="preserve">
+    <value>токен Яндекса</value>
+  </data>
+  <data name="Field_RefreshSessionId" xml:space="preserve">
+    <value>идентификатор сессии</value>
+  </data>
+  <data name="Field_RefreshToken" xml:space="preserve">
+    <value>refresh-токен</value>
+  </data>
+  <data name="Field_ResetCode" xml:space="preserve">
+    <value>код восстановления</value>
+  </data>
+  <data name="Field_ConfirmationCode" xml:space="preserve">
+    <value>код подтверждения</value>
+  </data>
+  <data name="Field_Systolic" xml:space="preserve">
+    <value>верхнее давление</value>
+  </data>
+  <data name="Field_Diastolic" xml:space="preserve">
+    <value>нижнее давление</value>
+  </data>
+  <data name="Field_Pulse" xml:space="preserve">
+    <value>пульс</value>
+  </data>
+  <data name="Field_RecordedAt" xml:space="preserve">
+    <value>дата измерения</value>
+  </data>
+  <data name="Field_PressureSource" xml:space="preserve">
+    <value>источник измерения</value>
+  </data>
+  <data name="Field_MetricId" xml:space="preserve">
+    <value>идентификатор метрики</value>
+  </data>
+  <data name="Field_MetricTitle" xml:space="preserve">
+    <value>название метрики</value>
+  </data>
+  <data name="Field_MetricUnit" xml:space="preserve">
+    <value>единица измерения</value>
+  </data>
+  <data name="Field_TargetMin" xml:space="preserve">
+    <value>минимальное целевое значение</value>
+  </data>
+  <data name="Field_TargetMax" xml:space="preserve">
+    <value>максимальное целевое значение</value>
+  </data>
+  <data name="Field_MetricVisualStyle" xml:space="preserve">
+    <value>стиль метрики</value>
+  </data>
+  <data name="Field_MetricValue" xml:space="preserve">
+    <value>значение метрики</value>
+  </data>
+  <data name="Field_MetricRecordedOn" xml:space="preserve">
+    <value>дата значения</value>
+  </data>
+  <data name="Field_DoctorName" xml:space="preserve">
+    <value>имя врача</value>
+  </data>
+  <data name="Field_Specialty" xml:space="preserve">
+    <value>специализация</value>
+  </data>
+  <data name="Field_AppointmentDate" xml:space="preserve">
+    <value>дата визита</value>
+  </data>
+  <data name="Field_AppointmentTime" xml:space="preserve">
+    <value>время визита</value>
+  </data>
+  <data name="Field_VisitLocation" xml:space="preserve">
+    <value>место визита</value>
+  </data>
+  <data name="Field_VisitType" xml:space="preserve">
+    <value>тип визита</value>
+  </data>
+  <data name="Field_MedicationName" xml:space="preserve">
+    <value>название препарата</value>
+  </data>
+  <data name="Field_DosageValue" xml:space="preserve">
+    <value>дозировка</value>
+  </data>
+  <data name="Field_DosageUnit" xml:space="preserve">
+    <value>единица дозировки</value>
+  </data>
+  <data name="Field_MedicationFrequency" xml:space="preserve">
+    <value>частота приёма</value>
+  </data>
+  <data name="Field_MedicationTimes" xml:space="preserve">
+    <value>время приёма</value>
+  </data>
+  <data name="Field_ScheduledWeekdays" xml:space="preserve">
+    <value>дни приёма</value>
+  </data>
+  <data name="Field_MedicationDate" xml:space="preserve">
+    <value>дата приёма</value>
+  </data>
+  <data name="Field_MedicationStatus" xml:space="preserve">
+    <value>статус приёма</value>
+  </data>
+  <data name="Field_FirstName" xml:space="preserve">
+    <value>имя</value>
+  </data>
+  <data name="Field_LastName" xml:space="preserve">
+    <value>фамилия</value>
+  </data>
+  <data name="Field_Birthday" xml:space="preserve">
+    <value>дата рождения</value>
+  </data>
+  <data name="Field_AvatarUrl" xml:space="preserve">
+    <value>ссылка на аватар</value>
+  </data>
+  <data name="Field_Height" xml:space="preserve">
+    <value>рост</value>
+  </data>
+  <data name="Field_Weight" xml:space="preserve">
+    <value>вес</value>
+  </data>
+  <data name="Field_FullName" xml:space="preserve">
+    <value>имя и фамилия</value>
+  </data>
+  <data name="Field_Gender" xml:space="preserve">
+    <value>пол</value>
+  </data>
+  <data name="Field_Age" xml:space="preserve">
+    <value>возраст</value>
+  </data>
+  <data name="Field_BloodType" xml:space="preserve">
+    <value>группа крови</value>
+  </data>
+  <data name="Field_PrimaryDoctor" xml:space="preserve">
+    <value>лечащий врач</value>
+  </data>
+  <data name="Field_EmergencyContactName" xml:space="preserve">
+    <value>имя экстренного контакта</value>
+  </data>
+  <data name="Field_EmergencyContactDetails" xml:space="preserve">
+    <value>контакт экстренной связи</value>
+  </data>
+  <data name="Field_UserPassword" xml:space="preserve">
+    <value>пароль пользователя</value>
+  </data>
+  <data name="Field_UserEmail" xml:space="preserve">
+    <value>почта пользователя</value>
+  </data>
+  <data name="Validation_RequestValidationFailed" xml:space="preserve">
+    <value>Проверьте введённые данные и попробуйте ещё раз.</value>
+  </data>
+  <data name="Validation_Required_Format" xml:space="preserve">
+    <value>Поле «{0}» обязательно для заполнения.</value>
+  </data>
+  <data name="Validation_InvalidEmail" xml:space="preserve">
+    <value>Введите корректный адрес электронной почты.</value>
+  </data>
+  <data name="Validation_MinLength_Format" xml:space="preserve">
+    <value>Поле «{0}» должно содержать не меньше {1} символов.</value>
+  </data>
+  <data name="Validation_MaxLength_Format" xml:space="preserve">
+    <value>Поле «{0}» не должно превышать {1} символов.</value>
+  </data>
+  <data name="Validation_Range_Format" xml:space="preserve">
+    <value>Поле «{0}» должно быть в диапазоне от {1} до {2}.</value>
+  </data>
+  <data name="Validation_InvalidPhone" xml:space="preserve">
+    <value>Введите корректный номер телефона.</value>
+  </data>
+  <data name="Validation_InvalidGuid_Format" xml:space="preserve">
+    <value>Поле «{0}» имеет неверный формат.</value>
+  </data>
+  <data name="Validation_InvalidEnum_Format" xml:space="preserve">
+    <value>Поле «{0}» содержит недопустимое значение.</value>
+  </data>
+  <data name="Validation_InvalidDate_Format" xml:space="preserve">
+    <value>Укажите корректное значение для поля «{0}».</value>
+  </data>
+  <data name="Validation_CollectionRequired_Format" xml:space="preserve">
+    <value>Поле «{0}» должно содержать хотя бы одно значение.</value>
+  </data>
+  <data name="Validation_CollectionDistinct_Format" xml:space="preserve">
+    <value>Поле «{0}» не должно содержать повторяющиеся значения.</value>
+  </data>
+  <data name="Validation_MedicationTimesMustMatchFrequency" xml:space="preserve">
+    <value>Количество времён приёма должно соответствовать выбранной частоте.</value>
+  </data>
+  <data name="Validation_WeeklyMedicationRequiresSingleWeekday" xml:space="preserve">
+    <value>Для еженедельного приёма нужно выбрать ровно один день недели.</value>
+  </data>
+  <data name="Validation_InvalidWeekdayValues" xml:space="preserve">
+    <value>Дни приёма могут содержать только значения от 1 до 7.</value>
+  </data>
+  <data name="Validation_InvalidTimeOfDay" xml:space="preserve">
+    <value>Время приёма должно быть в диапазоне от 0 до 1439 минут.</value>
+  </data>
+  <data name="Validation_MetricTargetRangeInvalid" xml:space="preserve">
+    <value>Максимальное целевое значение должно быть больше или равно минимальному.</value>
+  </data>
+  <data name="Validation_PasswordResetCodeLength_Format" xml:space="preserve">
+    <value>Код восстановления должен состоять из {0} цифр.</value>
+  </data>
+  <data name="Validation_InvalidBloodType" xml:space="preserve">
+    <value>Укажите корректную группу крови.</value>
+  </data>
+  <data name="Validation_InvalidGender" xml:space="preserve">
+    <value>Укажите корректное значение пола.</value>
+  </data>
+  <data name="Validation_InvalidUrl_Format" xml:space="preserve">
+    <value>Поле «{0}» должно содержать корректную ссылку.</value>
+  </data>
+  <data name="Validation_DateCannotBeInFuture_Format" xml:space="preserve">
+    <value>Поле «{0}» не может быть из будущего.</value>
+  </data>
+</root>

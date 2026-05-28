@@ -20,7 +20,7 @@ namespace Data.Repositories
             var list = await _context.Set<MetricRecord>()
                 .AsNoTracking()
                 .Where(x => scopedMetricIds.Contains(x.HealthMetricId))
-                .Where(x => x.RecordedOn >= DateTime.UtcNow.AddDays(-7))
+                .Where(x => x.RecordedOn >= DateTime.UtcNow.Date.AddDays(-7))
                 .Select(x => new MetricRecordGraphProjection
                 {
                     RecordedAt = x.RecordedOn,

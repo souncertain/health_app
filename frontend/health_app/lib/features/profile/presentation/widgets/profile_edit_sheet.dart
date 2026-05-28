@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/user_profile.dart';
 
@@ -105,10 +106,12 @@ class _ProfileEditSheetState extends State<ProfileEditSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось сохранить профиль.')),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось сохранить профиль.',
         );
       }
     } finally {

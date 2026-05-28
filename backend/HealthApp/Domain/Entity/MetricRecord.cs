@@ -11,6 +11,8 @@ namespace Domain.Entity
         public Guid Id { get; set; }
         public Guid HealthMetricId { get; set; }
         public double Value { get; set; }
+
+        [Column(TypeName = "date")]
         public DateTime RecordedOn { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime LastUpdatedAt { get; set; }

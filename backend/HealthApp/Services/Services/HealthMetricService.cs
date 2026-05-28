@@ -1,16 +1,21 @@
-﻿using AutoMapper;
+using AutoMapper;
 using Data.Interfaces;
 using Domain.Dto.HealthMetric;
 using Domain.Entity;
 using Enums;
 using Services.Interfaces;
+using Services.Validation.Infrastructure;
 
 namespace Services.Services
 {
     public class HealthMetricService : AbstractService<HealthMetric, HealthMetricCreateDto, HealthMetricDetailsDto>, IHealthMetricService
     {
         private readonly IHealthMetricRepository _healthMetricRepository;
-        public HealthMetricService(IHealthMetricRepository repository, IMapper mapper) : base(repository, mapper) 
+
+        public HealthMetricService(
+            IHealthMetricRepository repository,
+            IMapper mapper,
+            IRequestValidationService validationService) : base(repository, mapper, validationService)
         {
             _healthMetricRepository = repository;
         }

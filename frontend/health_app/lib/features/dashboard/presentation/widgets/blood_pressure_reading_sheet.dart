@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/blood_pressure_reading.dart';
 
@@ -89,10 +90,12 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось сохранить измерение.')),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось сохранить измерение.',
         );
       }
     } finally {
@@ -110,7 +113,8 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
     final confirmed = await showDeleteConfirmationDialog(
       context,
       title: 'Удалить запись?',
-      message: 'Это измерение будет удалено из локального хранилища.',
+      message:
+          'Это измерение будет удалено из локального хранилища и очереди синхронизации.',
     );
     if (!confirmed) {
       return;
@@ -123,10 +127,12 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось удалить измерение.')),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось удалить измерение.',
         );
       }
     } finally {
@@ -150,7 +156,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
           children: [
             AppTextField(
               label: 'Верхнее (мм рт. ст.)',
-              hintText: 'напр. 120',
+              hintText: 'например, 120',
               controller: _systolicController,
               accentColor: const Color(0xFF1DB954),
               keyboardType: TextInputType.number,
@@ -159,7 +165,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
             const SizedBox(height: 20),
             AppTextField(
               label: 'Нижнее (мм рт. ст.)',
-              hintText: 'напр. 80',
+              hintText: 'например, 80',
               controller: _diastolicController,
               accentColor: const Color(0xFF1DB954),
               keyboardType: TextInputType.number,
@@ -168,7 +174,7 @@ class _BloodPressureReadingSheetState extends State<BloodPressureReadingSheet> {
             const SizedBox(height: 20),
             AppTextField(
               label: 'Пульс (уд/мин)',
-              hintText: 'напр. 72',
+              hintText: 'например, 72',
               controller: _pulseController,
               accentColor: const Color(0xFF1DB954),
               keyboardType: TextInputType.number,

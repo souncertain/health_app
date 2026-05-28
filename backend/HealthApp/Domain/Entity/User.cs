@@ -18,6 +18,9 @@ namespace Domain.Entity
         [EmailAddress]
         public string Email { get; set; } = string.Empty;
 
+        [Required]
+        public bool EmailConfirmed { get; set; }
+
         [MaxLength(2048)]
         public string? PasswordHash { get; set; }
 

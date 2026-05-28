@@ -387,7 +387,7 @@ namespace Data.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("RecordedOn")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("date");
 
                     b.Property<double>("Value")
                         .HasColumnType("double precision");
@@ -485,6 +485,9 @@ namespace Data.Migrations
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime>("LastUpdatedAt")
                         .HasColumnType("timestamp with time zone");

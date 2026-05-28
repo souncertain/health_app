@@ -4,6 +4,7 @@ using Domain.Dto.Medication;
 using Domain.Entity;
 using Enums;
 using Services.Interfaces;
+using Services.Validation.Infrastructure;
 
 namespace Services.Services
 {
@@ -11,8 +12,11 @@ namespace Services.Services
     {
         private readonly IMedicationRepository _medicationRepository;
 
-        public MedicationService(IMedicationRepository repository, IMapper mapper)
-            : base(repository, mapper)
+        public MedicationService(
+            IMedicationRepository repository,
+            IMapper mapper,
+            IRequestValidationService validationService)
+            : base(repository, mapper, validationService)
         {
             _medicationRepository = repository;
         }
@@ -33,6 +37,14 @@ namespace Services.Services
             MedicationDayStatus? status,
             CancellationToken ct = default)
         {
+            await _validationService.ValidateAndThrowAsync(
+                new MedicationDailyStatusUpsertDto
+                {
+                    Date = date,
+                    Status = status
+                },
+                ct);
+
             var dailyStatus = await _medicationRepository.SetMedicationDailyStatus(
                 medicationId,
                 date,

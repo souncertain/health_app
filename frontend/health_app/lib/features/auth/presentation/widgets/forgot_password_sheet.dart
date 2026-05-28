@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/auth_exception.dart';
 import '../controllers/auth_controller.dart';
@@ -75,7 +76,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
         'If an account exists for this email, we sent a reset code to the mailbox.',
       );
     } on AuthException catch (error) {
-      _showMessage(error.message);
+      _showError(error, 'Could not send the reset code. Please try again.');
     } catch (_) {
       _showMessage('Could not send the reset code. Please try again.');
     }
@@ -99,7 +100,7 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
 
       Navigator.of(context).pop(_emailController.text.trim());
     } on AuthException catch (error) {
-      _showMessage(error.message);
+      _showError(error, 'Could not reset the password. Please try again.');
     } catch (_) {
       _showMessage('Could not reset the password. Please try again.');
     }
@@ -109,6 +110,14 @@ class _ForgotPasswordSheetState extends State<ForgotPasswordSheet> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _showError(Object error, String fallbackMessage) {
+    showAppErrorSnackBarForException(
+      context,
+      error,
+      fallbackMessage: fallbackMessage,
+    );
   }
 
   @override

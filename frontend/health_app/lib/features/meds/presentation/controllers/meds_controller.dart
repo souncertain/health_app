@@ -1,8 +1,6 @@
-import 'dart:async';
-
-import 'package:flutter/foundation.dart';
-
+import '../../../../core/controllers/cache_first_collection_controller.dart';
 import '../../../../core/services/local_notifications_service.dart';
+import '../../../../core/utils/collection_extensions.dart';
 import '../../domain/entities/medication.dart';
 import '../../domain/usecases/delete_medication.dart';
 import '../../domain/usecases/get_cached_medications.dart';
@@ -52,7 +50,7 @@ class MedicationDaySummary {
   double get progress => total == 0 ? 0 : taken / total;
 }
 
-class MedsController extends ChangeNotifier {
+class MedsController extends CacheFirstCollectionController<Medication> {
   MedsController({
     required GetCachedMedicationsUseCase getCachedMedications,
     required GetMedicationsUseCase getMedications,
@@ -75,46 +73,29 @@ class MedsController extends ChangeNotifier {
   final DeleteMedicationUseCase _deleteMedication;
   final NotificationScheduler _notificationScheduler;
 
-  bool _isLoading = false;
-  bool _isSaving = false;
-  String? _errorMessage;
-  List<Medication> _medications = const [];
-  bool _initialized = false;
+  bool get hasMedications => currentItems.isNotEmpty;
+  List<Medication> get allMedications => List.unmodifiable(currentItems);
 
-  bool get isLoading => _isLoading;
-  bool get isSaving => _isSaving;
-  String? get errorMessage => _errorMessage;
-  bool get hasMedications => _medications.isNotEmpty;
-  List<Medication> get allMedications => List.unmodifiable(_medications);
+  @override
+  String get refreshErrorMessage =>
+      'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РїСЂРµРїР°СЂР°С‚С‹.';
 
-  Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
+  @override
+  Future<List<Medication>> loadCachedItems() => _getCachedMedications();
 
-    _initialized = true;
-    await _loadCached();
-    unawaited(refresh(showLoading: _medications.isEmpty));
+  @override
+  Future<List<Medication>> loadRemoteItems() => _getMedications();
+
+  @override
+  List<Medication> sortItems(List<Medication> items) {
+    final sorted = List<Medication>.from(items);
+    _sortInPlace(sorted);
+    return sorted;
   }
 
-  Future<void> refresh({bool showLoading = true}) async {
-    if (showLoading) {
-      _isLoading = true;
-    }
-    _errorMessage = null;
-    notifyListeners();
-
-    try {
-      _setMedications(await _getMedications());
-      await _notificationScheduler.syncMedicationNotifications(_medications);
-    } catch (_) {
-      _errorMessage = 'Не удалось загрузить препараты.';
-    } finally {
-      if (showLoading) {
-        _isLoading = false;
-      }
-      notifyListeners();
-    }
+  @override
+  Future<void> onItemsUpdated(List<Medication> items) {
+    return _notificationScheduler.syncMedicationNotifications(items);
   }
 
   Future<void> saveMedication({
@@ -157,37 +138,26 @@ class MedsController extends ChangeNotifier {
           updatedAt: now,
         );
 
-    await _persistMedication(
-      previousMedications: _medications,
-      nextMedications: _upsertMedication(_medications, medication),
-      medication: medication,
-      errorMessage: 'Не удалось сохранить препарат.',
+    await runOptimisticMutation(
+      nextItems: _upsertMedication(currentItems, medication),
+      action: () => _saveMedication(medication),
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕС…СЂР°РЅРёС‚СЊ РїСЂРµРїР°СЂР°С‚.',
       rethrowOnFailure: true,
     );
   }
 
   Future<void> deleteMedication(Medication medication) async {
-    _isSaving = true;
-    _errorMessage = null;
-    final previousMedications = _medications;
-    _setMedications(
-      _medications.where((item) => item.id != medication.id).toList(),
+    await runOptimisticMutation(
+      nextItems: currentItems.where((item) => item.id != medication.id).toList(),
+      action: () async {
+        await _deleteMedication(medication.id);
+        await _notificationScheduler.cancelMedicationNotifications(
+          medication.id,
+        );
+      },
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ СѓРґР°Р»РёС‚СЊ РїСЂРµРїР°СЂР°С‚.',
+      rethrowOnFailure: true,
     );
-    notifyListeners();
-
-    try {
-      await _deleteMedication(medication.id);
-      await _notificationScheduler.cancelMedicationNotifications(medication.id);
-      await _reloadFromCache();
-    } catch (_) {
-      _setMedications(previousMedications);
-      _errorMessage = 'Не удалось удалить препарат.';
-      notifyListeners();
-      rethrow;
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
   }
 
   Future<void> toggleNotifications(Medication medication) async {
@@ -196,11 +166,10 @@ class MedsController extends ChangeNotifier {
       updatedAt: DateTime.now(),
     );
 
-    await _persistMedication(
-      previousMedications: _medications,
-      nextMedications: _upsertMedication(_medications, updatedMedication),
-      medication: updatedMedication,
-      errorMessage: 'Не удалось обновить уведомления.',
+    await runOptimisticMutation(
+      nextItems: _upsertMedication(currentItems, updatedMedication),
+      action: () => _saveMedication(updatedMedication),
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СѓРІРµРґРѕРјР»РµРЅРёСЏ.',
     );
   }
 
@@ -221,18 +190,19 @@ class MedsController extends ChangeNotifier {
       nextExplicitStatus,
     );
 
-    await _persistDailyStatus(
-      previousMedications: _medications,
-      nextMedications: _upsertMedication(_medications, updatedMedication),
-      medicationId: medication.id,
-      date: selectedDate,
-      status: nextExplicitStatus,
-      errorMessage: 'Не удалось обновить статус приема.',
+    await runOptimisticMutation(
+      nextItems: _upsertMedication(currentItems, updatedMedication),
+      action: () => _setMedicationDailyStatus(
+        medication.id,
+        selectedDate,
+        nextExplicitStatus,
+      ),
+      errorMessage: 'РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±РЅРѕРІРёС‚СЊ СЃС‚Р°С‚СѓСЃ РїСЂРёРµРјР°.',
     );
   }
 
   List<Medication> medicationsForDate(DateTime selectedDate) {
-    return _medications
+    return currentItems
         .where((medication) => timesForDate(medication, selectedDate).isNotEmpty)
         .toList();
   }
@@ -359,77 +329,6 @@ class MedsController extends ChangeNotifier {
     return reminders;
   }
 
-  Future<void> _loadCached() async {
-    try {
-      _setMedications(await _getCachedMedications());
-      await _notificationScheduler.syncMedicationNotifications(_medications);
-    } catch (_) {
-      // Keep empty state if cache loading fails.
-    }
-
-    _isLoading = false;
-    notifyListeners();
-  }
-
-  Future<void> _persistMedication({
-    required List<Medication> previousMedications,
-    required List<Medication> nextMedications,
-    required Medication medication,
-    required String errorMessage,
-    bool rethrowOnFailure = false,
-  }) async {
-    _isSaving = true;
-    _errorMessage = null;
-    _setMedications(nextMedications);
-    notifyListeners();
-
-    try {
-      await _saveMedication(medication);
-      await _reloadFromCache();
-    } catch (_) {
-      _setMedications(previousMedications);
-      _errorMessage = errorMessage;
-      if (rethrowOnFailure) {
-        rethrow;
-      }
-      notifyListeners();
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _persistDailyStatus({
-    required List<Medication> previousMedications,
-    required List<Medication> nextMedications,
-    required String medicationId,
-    required DateTime date,
-    required MedicationDayStatus? status,
-    required String errorMessage,
-  }) async {
-    _isSaving = true;
-    _errorMessage = null;
-    _setMedications(nextMedications);
-    notifyListeners();
-
-    try {
-      await _setMedicationDailyStatus(medicationId, date, status);
-      await _reloadFromCache();
-    } catch (_) {
-      _setMedications(previousMedications);
-      _errorMessage = errorMessage;
-      notifyListeners();
-    } finally {
-      _isSaving = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> _reloadFromCache() async {
-    _setMedications(await _getCachedMedications());
-    await _notificationScheduler.syncMedicationNotifications(_medications);
-  }
-
   int _firstScheduledWeekday(Medication? medication, int fallbackWeekday) {
     final scheduledWeekdays = medication?.scheduledWeekdays ?? const <int>[];
     if (scheduledWeekdays.isNotEmpty) {
@@ -448,20 +347,9 @@ class MedsController extends ChangeNotifier {
     Medication medication,
   ) {
     final updated = List<Medication>.from(source);
-    final index = updated.indexWhere((item) => item.id == medication.id);
-    if (index == -1) {
-      updated.add(medication);
-    } else {
-      updated[index] = medication;
-    }
-
+    updated.upsertWhere(medication, (item) => item.id == medication.id);
     _sortInPlace(updated);
     return updated;
-  }
-
-  void _setMedications(List<Medication> medications) {
-    _medications = List<Medication>.from(medications);
-    _sortInPlace(_medications);
   }
 
   void _sortInPlace(List<Medication> medications) {
@@ -516,13 +404,14 @@ class MedsController extends ChangeNotifier {
 
   MedicationForm _resolveForm(String name) {
     final normalized = name.toLowerCase();
-    if (normalized.contains('met') || normalized.contains('РјРµС‚')) {
+    if (normalized.contains('met') || normalized.contains('Р СР ВµРЎвЂљ')) {
       return MedicationForm.syringe;
     }
-    if (normalized.contains('statin') || normalized.contains('СЃС‚Р°С‚РёРЅ')) {
+    if (normalized.contains('statin') ||
+        normalized.contains('РЎРѓРЎвЂљР В°РЎвЂљР С‘Р Р…')) {
       return MedicationForm.circle;
     }
-    if (normalized.contains('pril') || normalized.contains('РїСЂРёР»')) {
+    if (normalized.contains('pril') || normalized.contains('Р С—РЎР‚Р С‘Р В»')) {
       return MedicationForm.capsule;
     }
     return MedicationForm.tablet;

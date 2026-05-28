@@ -4,7 +4,9 @@ namespace Services.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthSessionDto> Register(AuthRegisterDto dto, CancellationToken ct);
+        Task<AuthRegisterResultDto> Register(AuthRegisterDto dto, CancellationToken ct);
+        Task<AuthSessionDto> ConfirmEmail(AuthConfirmEmailDto dto, CancellationToken ct);
+        Task ResendEmailConfirmation(AuthResendEmailConfirmationDto dto, CancellationToken ct);
         Task<AuthSessionDto> SignInWithPassword(AuthLoginDto dto, CancellationToken ct);
         Task<AuthSessionDto> SignInWithGoogle(AuthGoogleSignInDto dto, CancellationToken ct);
         Task<AuthSessionDto> SignInWithYandex(AuthYandexSignInDto dto, CancellationToken ct);

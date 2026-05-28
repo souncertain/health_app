@@ -4,6 +4,7 @@ using Domain.Entity;
 using Domain.Exceptions;
 using Enums;
 using Services.Interfaces;
+using Services.Validation.Infrastructure;
 using System.Globalization;
 using System.Net;
 
@@ -20,8 +21,10 @@ namespace Services.Services
         private readonly IOneTimeCodeFactory _oneTimeCodeFactory;
         private readonly IAuthSessionPolicy _sessionPolicy;
         private readonly IPasswordResetPolicy _passwordResetPolicy;
+        private readonly IEmailConfirmationPolicy _emailConfirmationPolicy;
         private readonly IAccountEmailSender _accountEmailSender;
         private readonly ICurrentUserContext _currentUserContext;
+        private readonly IRequestValidationService _validationService;
 
         public AuthService(
             IAuthRepository repository,
@@ -33,8 +36,10 @@ namespace Services.Services
             IOneTimeCodeFactory oneTimeCodeFactory,
             IAuthSessionPolicy sessionPolicy,
             IPasswordResetPolicy passwordResetPolicy,
+            IEmailConfirmationPolicy emailConfirmationPolicy,
             IAccountEmailSender accountEmailSender,
-            ICurrentUserContext currentUserContext)
+            ICurrentUserContext currentUserContext,
+            IRequestValidationService validationService)
         {
             _repository = repository;
             _googleIdentityTokenValidator = googleIdentityTokenValidator;
@@ -45,43 +50,52 @@ namespace Services.Services
             _oneTimeCodeFactory = oneTimeCodeFactory;
             _sessionPolicy = sessionPolicy;
             _passwordResetPolicy = passwordResetPolicy;
+            _emailConfirmationPolicy = emailConfirmationPolicy;
             _accountEmailSender = accountEmailSender;
             _currentUserContext = currentUserContext;
+            _validationService = validationService;
         }
 
-        public async Task<AuthSessionDto> Register(AuthRegisterDto dto, CancellationToken ct)
+        public async Task<AuthRegisterResultDto> Register(AuthRegisterDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var normalizedEmail = NormalizeEmail(dto.Email);
             var existingUser = await _repository.GetUserByEmail(normalizedEmail, ct);
-            if (existingUser is not null)
+            if (existingUser is not null && existingUser.EmailConfirmed)
             {
                 throw new AuthException("A user with this email already exists.", HttpStatusCode.Conflict);
             }
 
-            var user = new User
+            var user = existingUser ?? new User
             {
                 Id = Guid.NewGuid(),
                 Email = normalizedEmail,
-                Phone = NormalizeOptional(dto.Phone)
+                Phone = NormalizeOptional(dto.Phone),
+                EmailConfirmed = false
             };
+            user.Email = normalizedEmail;
+            user.Phone = NormalizeOptional(dto.Phone);
             user.PasswordHash = _passwordHashService.HashPassword(user, dto.Password);
+            user.LastUpdatedAt = DateTime.UtcNow;
 
-            await _repository.AddUser(user, ct);
+            if (existingUser is null)
+            {
+                await _repository.AddUser(user, ct);
+            }
 
-            var session = await IssueSession(
-                user,
-                AuthProvider.Password,
-                dto.DeviceId,
-                dto.DeviceName,
-                fallbackDisplayName: null,
-                ct);
-
+            await GenerateAndSendEmailConfirmationCode(user, ct);
             await _repository.Save(ct);
-            return session;
+
+            return new AuthRegisterResultDto
+            {
+                Email = normalizedEmail,
+                EmailConfirmationRequired = true
+            };
         }
 
         public async Task<AuthSessionDto> SignInWithPassword(AuthLoginDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var normalizedEmail = NormalizeEmail(dto.Email);
             var user = await _repository.GetUserByEmail(normalizedEmail, ct);
             if (user is null)
@@ -93,6 +107,11 @@ namespace Services.Services
             if (verifyResult == PasswordVerificationResult.Failed)
             {
                 throw new AuthException("Invalid email or password.", HttpStatusCode.Unauthorized);
+            }
+
+            if (!user.EmailConfirmed)
+            {
+                throw new AuthException("Please confirm your email before signing in.", HttpStatusCode.Forbidden);
             }
 
             if (verifyResult == PasswordVerificationResult.SuccessRehashNeeded)
@@ -115,6 +134,7 @@ namespace Services.Services
 
         public async Task<AuthSessionDto> SignInWithGoogle(AuthGoogleSignInDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var externalProfile = await _googleIdentityTokenValidator.Validate(dto.IdToken, ct);
             var user = await ResolveExternalUser(externalProfile, ct);
 
@@ -132,6 +152,7 @@ namespace Services.Services
 
         public async Task<AuthSessionDto> SignInWithYandex(AuthYandexSignInDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var externalProfile = await _yandexIdentityProviderClient.GetProfile(dto.AccessToken, ct);
             var user = await ResolveExternalUser(externalProfile, ct);
 
@@ -147,11 +168,93 @@ namespace Services.Services
             return session;
         }
 
-        public async Task RequestPasswordReset(AuthForgotPasswordRequestDto dto, CancellationToken ct)
+        public async Task<AuthSessionDto> ConfirmEmail(AuthConfirmEmailDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var normalizedEmail = NormalizeEmail(dto.Email);
+            var normalizedCode = NormalizeCode(dto.Code);
             var user = await _repository.GetUserByEmail(normalizedEmail, ct);
             if (user is null)
+            {
+                throw new AuthException("Invalid confirmation code or email.", HttpStatusCode.BadRequest);
+            }
+
+            if (user.EmailConfirmed)
+            {
+                throw new AuthException("Email is already confirmed. Please sign in.", HttpStatusCode.Conflict);
+            }
+
+            var activeCode = await _repository.GetLatestActiveOneTimeCode(
+                user.Id,
+                AuthOneTimeCodePurpose.EmailConfirmation,
+                ct);
+
+            if (activeCode is null ||
+                !string.Equals(activeCode.Email, normalizedEmail, StringComparison.Ordinal) ||
+                activeCode.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new AuthException("Invalid confirmation code or email.", HttpStatusCode.BadRequest);
+            }
+
+            var incomingHash = _oneTimeCodeFactory.HashCode(normalizedCode);
+            if (!string.Equals(activeCode.CodeHash, incomingHash, StringComparison.Ordinal))
+            {
+                activeCode.FailedAttemptCount += 1;
+                activeCode.LastUpdatedAt = DateTime.UtcNow;
+                if (activeCode.FailedAttemptCount >= activeCode.MaxAllowedAttempts)
+                {
+                    activeCode.InvalidatedAt = DateTime.UtcNow;
+                }
+
+                await _repository.Save(ct);
+                throw new AuthException("Invalid confirmation code or email.", HttpStatusCode.BadRequest);
+            }
+
+            var now = DateTime.UtcNow;
+            user.EmailConfirmed = true;
+            user.LastUpdatedAt = now;
+
+            activeCode.UsedAt = now;
+            activeCode.LastUpdatedAt = now;
+
+            await _repository.InvalidateActiveOneTimeCodes(
+                user.Id,
+                AuthOneTimeCodePurpose.EmailConfirmation,
+                now,
+                ct);
+
+            var session = await IssueSession(
+                user,
+                AuthProvider.Password,
+                dto.DeviceId,
+                dto.DeviceName,
+                fallbackDisplayName: null,
+                ct);
+
+            await _repository.Save(ct);
+            return session;
+        }
+
+        public async Task ResendEmailConfirmation(AuthResendEmailConfirmationDto dto, CancellationToken ct)
+        {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            var user = await _repository.GetUserByEmail(normalizedEmail, ct);
+            if (user is null || user.EmailConfirmed)
+            {
+                return;
+            }
+
+            await GenerateAndSendEmailConfirmationCode(user, ct);
+            await _repository.Save(ct);
+        }
+
+        public async Task RequestPasswordReset(AuthForgotPasswordRequestDto dto, CancellationToken ct)
+        {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
+            var normalizedEmail = NormalizeEmail(dto.Email);
+            var user = await _repository.GetUserByEmail(normalizedEmail, ct);
+            if (user is null || !user.EmailConfirmed)
             {
                 return;
             }
@@ -209,6 +312,7 @@ namespace Services.Services
 
         public async Task ResetPassword(AuthResetPasswordDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var normalizedEmail = NormalizeEmail(dto.Email);
             var code = NormalizeCode(dto.Code);
             var user = await _repository.GetUserByEmail(normalizedEmail, ct);
@@ -262,6 +366,7 @@ namespace Services.Services
 
         public async Task<AuthSessionDto> Refresh(AuthRefreshDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var sessionId = ParseSessionId(dto.RefreshSessionId);
             var session = await _repository.GetRefreshSession(sessionId, ct);
             if (session?.User is null)
@@ -311,6 +416,7 @@ namespace Services.Services
 
         public async Task Logout(AuthLogoutDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
             var sessionId = ParseSessionId(dto.RefreshSessionId);
             var session = await _repository.GetRefreshSession(sessionId, ct);
             if (session is null)
@@ -350,6 +456,7 @@ namespace Services.Services
                 UserId = user.Id.ToString(),
                 DisplayName = BuildDisplayName(user, fallbackDisplayName: null),
                 Email = user.Email,
+                EmailConfirmed = user.EmailConfirmed,
                 HasPassword = !string.IsNullOrWhiteSpace(user.PasswordHash),
                 LinkedProviders = user.ExternalAuthAccounts
                     .Select(x => ToProviderName(x.Provider))
@@ -388,9 +495,15 @@ namespace Services.Services
                     Id = Guid.NewGuid(),
                     Email = normalizedEmail,
                     Phone = null,
-                    PasswordHash = null
+                    PasswordHash = null,
+                    EmailConfirmed = true
                 };
                 await _repository.AddUser(user, ct);
+            }
+            else if (!user.EmailConfirmed)
+            {
+                user.EmailConfirmed = true;
+                user.LastUpdatedAt = DateTime.UtcNow;
             }
 
             var account = new ExternalAuthAccount
@@ -479,7 +592,7 @@ namespace Services.Services
             var normalized = code.Trim().Replace(" ", string.Empty, StringComparison.Ordinal);
             if (string.IsNullOrWhiteSpace(normalized))
             {
-                throw new AuthException("Reset code is required.");
+                throw new AuthException("Code is required.");
             }
 
             return normalized;
@@ -537,5 +650,58 @@ namespace Services.Services
             AuthProvider.Yandex => "yandex",
             _ => provider.ToString().ToLowerInvariant()
         };
+
+        private async Task GenerateAndSendEmailConfirmationCode(User user, CancellationToken ct)
+        {
+            var now = DateTime.UtcNow;
+            var latestCode = await _repository.GetLatestActiveOneTimeCode(
+                user.Id,
+                AuthOneTimeCodePurpose.EmailConfirmation,
+                ct);
+
+            if (latestCode is not null && now - latestCode.CreatedAt < _emailConfirmationPolicy.ResendCooldown)
+            {
+                return;
+            }
+
+            await _repository.InvalidateActiveOneTimeCodes(
+                user.Id,
+                AuthOneTimeCodePurpose.EmailConfirmation,
+                now,
+                ct);
+
+            var code = _oneTimeCodeFactory.CreateNumericCode(_emailConfirmationPolicy.CodeLength);
+            var authCode = new AuthOneTimeCode
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                User = user,
+                Email = user.Email,
+                Purpose = AuthOneTimeCodePurpose.EmailConfirmation,
+                CodeHash = _oneTimeCodeFactory.HashCode(code),
+                ExpiresAt = now.Add(_emailConfirmationPolicy.CodeLifetime),
+                MaxAllowedAttempts = _emailConfirmationPolicy.MaxAttempts,
+                FailedAttemptCount = 0
+            };
+
+            await _repository.AddOneTimeCode(authCode, ct);
+            await _repository.Save(ct);
+
+            try
+            {
+                await _accountEmailSender.SendEmailConfirmationCode(
+                    user.Email,
+                    code,
+                    _emailConfirmationPolicy.CodeLifetime,
+                    ct);
+            }
+            catch
+            {
+                authCode.InvalidatedAt = DateTime.UtcNow;
+                authCode.LastUpdatedAt = authCode.InvalidatedAt.Value;
+                await _repository.Save(ct);
+                throw;
+            }
+        }
     }
 }

@@ -1,5 +1,6 @@
 import '../../domain/entities/blood_pressure_reading.dart';
 import '../../domain/repositories/blood_pressure_repository.dart';
+import '../../../../core/utils/collection_extensions.dart';
 import '../datasources/blood_pressure_local_data_source.dart';
 import '../datasources/blood_pressure_remote_data_source.dart';
 import '../models/blood_pressure_reading_model.dart';
@@ -18,7 +19,7 @@ class LocalBloodPressureRepository implements BloodPressureRepository {
   @override
   Future<void> deleteReading(String id) async {
     final readings = await _localDataSource.getReadings();
-    final target = readings.where((reading) => reading.id == id).firstOrNull;
+    final target = readings.firstWhereOrNull((reading) => reading.id == id);
     if (target == null) {
       return;
     }
@@ -219,16 +220,5 @@ class LocalBloodPressureRepository implements BloodPressureRepository {
 
     merged.sort((left, right) => right.recordedAt.compareTo(left.recordedAt));
     return merged;
-  }
-}
-
-extension on Iterable<BloodPressureReadingModel> {
-  BloodPressureReadingModel? get firstOrNull {
-    final iterator = this.iterator;
-    if (!iterator.moveNext()) {
-      return null;
-    }
-
-    return iterator.current;
   }
 }

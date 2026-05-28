@@ -7,7 +7,9 @@ class UserProfile {
     required this.id,
     required this.fullName,
     required this.email,
+    required this.phone,
     required this.gender,
+    required this.birthDate,
     required this.age,
     required this.bloodType,
     required this.heightCm,
@@ -27,7 +29,9 @@ class UserProfile {
   final String id;
   final String fullName;
   final String email;
+  final String phone;
   final ProfileGender gender;
+  final DateTime? birthDate;
   final int? age;
   final String? bloodType;
   final int? heightCm;
@@ -47,7 +51,9 @@ class UserProfile {
       id: 'profile-local',
       fullName: '',
       email: '',
+      phone: '',
       gender: ProfileGender.unspecified,
+      birthDate: null,
       age: null,
       bloodType: null,
       heightCm: null,
@@ -85,11 +91,30 @@ class UserProfile {
     return weightKg! / (heightMeters * heightMeters);
   }
 
+  int? get displayAge {
+    if (birthDate == null) {
+      return age;
+    }
+
+    final today = DateTime.now();
+    var years = today.year - birthDate!.year;
+    final hasBirthdayPassedThisYear =
+        today.month > birthDate!.month ||
+        (today.month == birthDate!.month && today.day >= birthDate!.day);
+    if (!hasBirthdayPassedThisYear) {
+      years--;
+    }
+
+    return years < 0 ? null : years;
+  }
+
   UserProfile copyWith({
     String? id,
     String? fullName,
     String? email,
+    String? phone,
     ProfileGender? gender,
+    Object? birthDate = _unset,
     Object? age = _unset,
     Object? bloodType = _unset,
     Object? heightCm = _unset,
@@ -107,7 +132,9 @@ class UserProfile {
       id: id ?? this.id,
       fullName: fullName ?? this.fullName,
       email: email ?? this.email,
+      phone: phone ?? this.phone,
       gender: gender ?? this.gender,
+      birthDate: birthDate == _unset ? this.birthDate : birthDate as DateTime?,
       age: age == _unset ? this.age : age as int?,
       bloodType: bloodType == _unset ? this.bloodType : bloodType as String?,
       heightCm: heightCm == _unset ? this.heightCm : heightCm as int?,

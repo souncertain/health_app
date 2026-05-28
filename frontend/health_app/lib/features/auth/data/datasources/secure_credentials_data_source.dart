@@ -15,8 +15,8 @@ class SecureCredentialsDataSource {
   Future<SavedCredentials> readCredentials() async {
     try {
       final email = await _storage.read(key: _emailKey) ?? '';
-      final password = await _storage.read(key: _passwordKey) ?? '';
-      return SavedCredentials(email: email, password: password);
+      await _storage.delete(key: _passwordKey);
+      return SavedCredentials(email: email, password: '');
     } on MissingPluginException {
       return const SavedCredentials.empty();
     } catch (_) {
@@ -24,13 +24,10 @@ class SecureCredentialsDataSource {
     }
   }
 
-  Future<void> saveCredentials({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> saveCredentials({required String email}) async {
     try {
       await _storage.write(key: _emailKey, value: email);
-      await _storage.write(key: _passwordKey, value: password);
+      await _storage.delete(key: _passwordKey);
     } on MissingPluginException {
       return;
     } catch (_) {

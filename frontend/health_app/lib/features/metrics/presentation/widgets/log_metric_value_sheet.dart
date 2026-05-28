@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/utils/date_time_labels.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/health_metric_item.dart';
@@ -91,12 +92,12 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Не удалось сохранить значение метрики.'),
-          ),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось сохранить значение метрики.',
         );
       }
     } finally {
@@ -146,9 +147,7 @@ class _LogMetricValueSheetState extends State<LogMetricValueSheet> {
               hintText: 'Введите ${widget.metric.unit}',
               controller: _valueController,
               accentColor: visuals.accentColor,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: visuals.accentColor,

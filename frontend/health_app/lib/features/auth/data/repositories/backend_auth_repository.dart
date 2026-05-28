@@ -1,5 +1,6 @@
 import '../../../../core/services/app_session_cleanup_service.dart';
 import '../../domain/auth_exception.dart';
+import '../../domain/entities/auth_register_result.dart';
 import '../../domain/entities/auth_session.dart';
 import '../../domain/entities/saved_credentials.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -66,21 +67,34 @@ class BackendAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AuthSession> registerWithPassword({
+  Future<AuthRegisterResult> registerWithPassword({
     required String email,
     required String password,
   }) async {
-    final session = await _remoteDataSource.register(
+    final result = await _remoteDataSource.register(
       email: email,
       password: password,
     );
+    await _secureCredentialsDataSource.saveCredentials(email: email.trim());
+    return result;
+  }
 
-    await _persistSuccessfulPasswordAuth(
-      session: session,
+  @override
+  Future<AuthSession> confirmEmail({
+    required String email,
+    required String code,
+  }) async {
+    final session = await _remoteDataSource.confirmEmail(
       email: email,
-      password: password,
+      code: code,
     );
+    await _persistSuccessfulPasswordAuth(session: session, email: email);
     return session;
+  }
+
+  @override
+  Future<void> resendEmailConfirmation({required String email}) {
+    return _remoteDataSource.resendEmailConfirmation(email: email);
   }
 
   @override
@@ -96,7 +110,6 @@ class BackendAuthRepository implements AuthRepository {
     await _persistSuccessfulPasswordAuth(
       session: session,
       email: email,
-      password: password,
     );
     return session;
   }
@@ -163,13 +176,9 @@ class BackendAuthRepository implements AuthRepository {
   Future<void> _persistSuccessfulPasswordAuth({
     required AuthSessionModel session,
     required String email,
-    required String password,
   }) async {
     await _localDataSource.saveSession(session);
-    await _secureCredentialsDataSource.saveCredentials(
-      email: email.trim(),
-      password: password,
-    );
+    await _secureCredentialsDataSource.saveCredentials(email: email.trim());
   }
 
   Future<AuthSessionModel> _signInWithGoogleGrant(

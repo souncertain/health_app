@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/utils/date_time_labels.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/medical_visit.dart';
@@ -120,9 +121,7 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       return;
     }
     if (_selectedTimeInMinutes == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Выберите время приёма.')));
+      showAppErrorSnackBar(context, 'Выберите время приёма.');
       return;
     }
 
@@ -142,16 +141,14 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? 'Не удалось обновить запись.'
-                  : 'Не удалось создать запись.',
-            ),
-          ),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: _isEditing
+              ? 'Не удалось обновить запись.'
+              : 'Не удалось создать запись.',
         );
       }
     } finally {
@@ -174,7 +171,7 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
           children: [
             AppTextField(
               label: 'Имя врача',
-              hintText: 'напр. Д-р Иван Петров',
+              hintText: 'напр. д-р Иван Петров',
               controller: _doctorController,
               accentColor: const Color(0xFFEF9200),
               validator: requiredFieldValidator,

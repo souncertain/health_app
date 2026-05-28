@@ -1,15 +1,20 @@
-﻿using Services.Interfaces;
+using AutoMapper;
 using Data.Interfaces;
 using Domain.Dto.BloodPressure;
-using AutoMapper;
 using Domain.Entity;
+using Services.Interfaces;
+using Services.Validation.Infrastructure;
 
 namespace Services.Services
 {
     public class BloodPressureService : AbstractService<BloodPressure, BloodPressureCreateDto, BloodPressureDetailsDto>, IBloodPressureService
     {
         private readonly IBloodPressureRepository _bloodPressureRepository;
-        public BloodPressureService(IBloodPressureRepository repository, IMapper mapper) : base(repository, mapper) 
+
+        public BloodPressureService(
+            IBloodPressureRepository repository,
+            IMapper mapper,
+            IRequestValidationService validationService) : base(repository, mapper, validationService)
         {
             _bloodPressureRepository = repository;
         }
@@ -20,7 +25,7 @@ namespace Services.Services
             return _mapper.Map<List<BloodPressureDetailsDto>>(bloodPressures);
         }
 
-        public async Task <BloodPressureAverageDataDto> GetAverageValues()
+        public async Task<BloodPressureAverageDataDto> GetAverageValues()
         {
             var (systolic, diastolic, pulse) = await _bloodPressureRepository.GetAverageValues();
             var dto = new BloodPressureAverageDataDto()

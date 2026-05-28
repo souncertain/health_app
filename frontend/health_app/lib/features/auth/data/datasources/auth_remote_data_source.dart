@@ -3,6 +3,7 @@ import 'dart:io';
 
 import '../../../../core/config/app_config.dart';
 import '../../domain/auth_exception.dart';
+import '../models/auth_register_result_model.dart';
 import '../models/auth_session_model.dart';
 
 class AuthRemoteDataSource {
@@ -19,13 +20,31 @@ class AuthRemoteDataSource {
     return client;
   }();
 
-  Future<AuthSessionModel> register({
+  Future<AuthRegisterResultModel> register({
     required String email,
     required String password,
-  }) {
-    return _postSession(
+  }) async {
+    final json = await _postJson(
       path: '/api/auth/register',
       payload: {'email': email.trim(), 'password': password},
+    );
+    return AuthRegisterResultModel.fromJson(json);
+  }
+
+  Future<AuthSessionModel> confirmEmail({
+    required String email,
+    required String code,
+  }) {
+    return _postSession(
+      path: '/api/auth/confirm-email',
+      payload: {'email': email.trim(), 'code': code.trim()},
+    );
+  }
+
+  Future<void> resendEmailConfirmation({required String email}) {
+    return _postWithoutResponse(
+      path: '/api/auth/resend-confirmation',
+      payload: {'email': email.trim()},
     );
   }
 
@@ -144,7 +163,8 @@ class AuthRemoteDataSource {
       final message =
           decoded?['message'] as String? ??
           'Request failed with status ${response.statusCode}.';
-      throw AuthException(message);
+      final uiMessage = _resolveUiMessage(decoded) ?? message;
+      throw AuthException(message, uiMessage: uiMessage);
     }
 
     if (decoded == null) {
@@ -171,7 +191,8 @@ class AuthRemoteDataSource {
       final message =
           decoded?['message'] as String? ??
           'Request failed with status ${response.statusCode}.';
-      throw AuthException(message);
+      final uiMessage = _resolveUiMessage(decoded) ?? message;
+      throw AuthException(message, uiMessage: uiMessage);
     }
   }
 
@@ -184,6 +205,31 @@ class AuthRemoteDataSource {
     final decoded = jsonDecode(trimmed);
     if (decoded is Map<String, dynamic>) {
       return decoded;
+    }
+
+    return null;
+  }
+
+  String? _resolveUiMessage(Map<String, dynamic>? decoded) {
+    final uiMessage = decoded?['uiMessage'] as String?;
+    if (uiMessage != null && uiMessage.trim().isNotEmpty) {
+      return uiMessage.trim();
+    }
+
+    final errors = decoded?['errors'];
+    if (errors is Map) {
+      for (final value in errors.values) {
+        if (value is List && value.isNotEmpty) {
+          final first = '${value.first}'.trim();
+          if (first.isNotEmpty) {
+            return first;
+          }
+        }
+
+        if (value is String && value.trim().isNotEmpty) {
+          return value.trim();
+        }
+      }
     }
 
     return null;

@@ -1,3 +1,4 @@
+import '../entities/auth_register_result.dart';
 import '../entities/auth_session.dart';
 import '../entities/saved_credentials.dart';
 
@@ -6,10 +7,17 @@ abstract class AuthRepository {
 
   Future<SavedCredentials> getSavedCredentials();
 
-  Future<AuthSession> registerWithPassword({
+  Future<AuthRegisterResult> registerWithPassword({
     required String email,
     required String password,
   });
+
+  Future<AuthSession> confirmEmail({
+    required String email,
+    required String code,
+  });
+
+  Future<void> resendEmailConfirmation({required String email});
 
   Future<AuthSession> signInWithPassword({
     required String email,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/utils/date_time_labels.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 import '../../domain/entities/medication.dart';
@@ -77,7 +78,8 @@ class _MedicationSheetState extends State<MedicationSheet> {
   @override
   void initState() {
     super.initState();
-    _frequency = widget.initialMedication?.frequency ?? MedicationFrequency.onceDaily;
+    _frequency =
+        widget.initialMedication?.frequency ?? MedicationFrequency.onceDaily;
     _notificationsEnabled = widget.initialMedication?.notificationsEnabled ?? true;
     _timesInMinutes = _buildInitialTimes();
     _syncTimeSlots();
@@ -197,11 +199,7 @@ class _MedicationSheetState extends State<MedicationSheet> {
 
     final timesInMinutes = List<int>.from(_timesInMinutes)..sort();
     if (timesInMinutes.toSet().length != timesInMinutes.length) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Время приема не должно повторяться.'),
-        ),
-      );
+      showAppErrorSnackBar(context, 'Время приема не должно повторяться.');
       return;
     }
 
@@ -221,10 +219,12 @@ class _MedicationSheetState extends State<MedicationSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось сохранить препарат.')),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось сохранить препарат.',
         );
       }
     } finally {
@@ -255,10 +255,12 @@ class _MedicationSheetState extends State<MedicationSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось удалить препарат.')),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось удалить препарат.',
         );
       }
     } finally {

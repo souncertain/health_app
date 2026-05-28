@@ -38,6 +38,14 @@ namespace Data
                 .Property(x => x.Date)
                 .HasColumnType("date");
 
+            modelBuilder.Entity<MetricRecord>()
+                .Property(x => x.RecordedOn)
+                .HasColumnType("date");
+
+            modelBuilder.Entity<MedicalVisit>()
+                .Property(x => x.AppointmentDate)
+                .HasColumnType("date");
+
             modelBuilder.Entity<MedicationDailyStatus>()
                 .HasIndex(x => new { x.MedicationId, x.Date })
                 .IsUnique();

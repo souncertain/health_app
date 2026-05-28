@@ -15,7 +15,7 @@ namespace Services.Mappers
                 .ForMember(x => x.UserId, y => y.MapFrom(source => source.UserId))
                 .ForMember(x => x.DoctorName, y => y.MapFrom(source => source.DoctorName))
                 .ForMember(x => x.Specialty, y => y.MapFrom(source => source.Speciality))
-                .ForMember(x => x.AppointmentDate, y => y.MapFrom(source => source.AppointmentDate))
+                .ForMember(x => x.AppointmentDate, y => y.MapFrom(source => source.AppointmentDate.Date))
                 .ForMember(x => x.TimeInMinutes, y => y.MapFrom(source => source.TimeInMinutes))
                 .ForMember(x => x.Location, y => y.MapFrom(source => source.Location))
                 .ForMember(x => x.VisitType, y => y.MapFrom(source => source.VisitType))

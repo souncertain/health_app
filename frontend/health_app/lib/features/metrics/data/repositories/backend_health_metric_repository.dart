@@ -1,4 +1,5 @@
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/collection_extensions.dart';
 import '../../domain/entities/health_metric_item.dart';
 import '../../domain/repositories/health_metric_repository.dart';
 import '../datasources/health_metrics_local_data_source.dart';
@@ -74,12 +75,10 @@ class BackendHealthMetricRepository implements HealthMetricRepository {
     );
 
     final metrics = await _localDataSource.getMetrics();
-    final index = metrics.indexWhere((item) => item.id == metric.id);
-    if (index == -1) {
-      metrics.add(HealthMetricModel.fromEntity(syncedMetric));
-    } else {
-      metrics[index] = HealthMetricModel.fromEntity(syncedMetric);
-    }
+    metrics.upsertWhere(
+      HealthMetricModel.fromEntity(syncedMetric),
+      (item) => item.id == metric.id,
+    );
 
     await _localDataSource.saveAll(
       _sort(metrics).map(HealthMetricModel.fromEntity).toList(),
@@ -89,10 +88,7 @@ class BackendHealthMetricRepository implements HealthMetricRepository {
   @override
   Future<void> deleteMetric(String metricId) async {
     final metrics = await _localDataSource.getMetrics();
-    final target = metrics
-        .where((item) => item.id == metricId)
-        .cast<HealthMetricItem?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+    final target = metrics.firstWhereOrNull((item) => item.id == metricId);
 
     if (target == null) {
       return;
@@ -112,9 +108,7 @@ class BackendHealthMetricRepository implements HealthMetricRepository {
     List<HealthMetricModel> localMetrics,
   ) {
     final existing = localMetrics
-        .where((item) => item.remoteId == remoteMetric.remoteId)
-        .cast<HealthMetricItem?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+        .firstWhereOrNull((item) => item.remoteId == remoteMetric.remoteId);
 
     return remoteMetric.copyWith(id: existing?.id ?? remoteMetric.id);
   }
@@ -122,10 +116,12 @@ class BackendHealthMetricRepository implements HealthMetricRepository {
   List<HealthMetricItem> _sort(List<HealthMetricItem> metrics) {
     final sorted = List<HealthMetricItem>.from(metrics)
       ..sort((left, right) {
-        if (left.isCustom != right.isCustom) {
-          return left.isCustom ? 1 : -1;
+        final updatedAtComparison = right.updatedAt.compareTo(left.updatedAt);
+        if (updatedAtComparison != 0) {
+          return updatedAtComparison;
         }
-        return left.createdAt.compareTo(right.createdAt);
+
+        return left.title.toLowerCase().compareTo(right.title.toLowerCase());
       });
     return sorted;
   }

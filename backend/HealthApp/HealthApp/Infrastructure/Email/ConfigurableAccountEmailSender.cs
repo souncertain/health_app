@@ -37,6 +37,20 @@ namespace HealthApp.Infrastructure.Email
             return SendMessage(toEmail, subject, body, ct);
         }
 
+        public Task SendEmailConfirmationCode(string toEmail, string code, TimeSpan lifetime, CancellationToken ct)
+        {
+            var roundedMinutes = Math.Max(1, (int)Math.Ceiling(lifetime.TotalMinutes));
+            var subject = "HealthTrack email confirmation code";
+            var body = $"""
+                Confirm your email for HealthTrack using this code: {code}
+
+                This code expires in {roundedMinutes} minute(s).
+                If you did not create an account, you can ignore this email.
+                """;
+
+            return SendMessage(toEmail, subject, body, ct);
+        }
+
         private async Task SendMessage(string toEmail, string subject, string body, CancellationToken ct)
         {
             if (string.Equals(_options.Mode, "Smtp", StringComparison.OrdinalIgnoreCase))
@@ -107,7 +121,7 @@ namespace HealthApp.Infrastructure.Email
                 """;
 
             await File.WriteAllTextAsync(fullPath, content, Encoding.UTF8, ct);
-            _logger.LogInformation("Password reset email saved to pickup directory at {Path}", fullPath);
+            _logger.LogInformation("Account email saved to pickup directory at {Path}", fullPath);
         }
     }
 }

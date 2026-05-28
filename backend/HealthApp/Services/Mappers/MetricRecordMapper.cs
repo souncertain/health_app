@@ -11,7 +11,7 @@ namespace Services.Mappers
                 .ForMember(x => x.Id, y => y.MapFrom(source => Guid.NewGuid()))
                 .ForMember(x => x.HealthMetricId, y => y.MapFrom(source => source.HealthMetricId))
                 .ForMember(x => x.Value, y => y.MapFrom(source => source.Value))
-                .ForMember(x => x.RecordedOn, y => y.MapFrom(source => source.RecordedOn))
+                .ForMember(x => x.RecordedOn, y => y.MapFrom(source => source.RecordedOn.Date))
                 .ForMember(x => x.CreatedAt, y => y.Ignore())
                 .ForMember(x => x.LastUpdatedAt, y => y.Ignore());
 

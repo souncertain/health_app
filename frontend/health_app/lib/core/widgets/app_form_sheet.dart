@@ -4,11 +4,15 @@ Future<T?> showAppModalSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
   double? heightFactor,
+  bool isDismissible = true,
+  bool enableDrag = true,
 }) {
   return showModalBottomSheet<T>(
     context: context,
     useRootNavigator: true,
     isScrollControlled: true,
+    isDismissible: isDismissible,
+    enableDrag: enableDrag,
     useSafeArea: false,
     backgroundColor: Colors.white,
     barrierColor: Colors.black.withValues(alpha: 0.3),
@@ -136,6 +140,7 @@ class AppTextField extends StatelessWidget {
     required this.accentColor,
     this.validator,
     this.keyboardType,
+    this.enabled = true,
     this.readOnly = false,
     this.obscureText = false,
     this.onTap,
@@ -154,6 +159,7 @@ class AppTextField extends StatelessWidget {
   final Color accentColor;
   final String? Function(String?)? validator;
   final TextInputType? keyboardType;
+  final bool enabled;
   final bool readOnly;
   final bool obscureText;
   final VoidCallback? onTap;
@@ -177,6 +183,7 @@ class AppTextField extends StatelessWidget {
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
+          enabled: enabled,
           readOnly: readOnly,
           obscureText: obscureText,
           onTap: onTap,

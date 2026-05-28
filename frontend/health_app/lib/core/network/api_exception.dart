@@ -14,6 +14,18 @@ class ApiException implements Exception {
   }
 }
 
+class ApiValidationException extends ApiException {
+  const ApiValidationException(
+    super.message, {
+    required this.uiMessage,
+    this.fieldErrors = const {},
+    super.statusCode,
+  });
+
+  final String uiMessage;
+  final Map<String, List<String>> fieldErrors;
+}
+
 class ApiNetworkException extends ApiException {
   const ApiNetworkException([super.message = 'Network request failed.']);
 }

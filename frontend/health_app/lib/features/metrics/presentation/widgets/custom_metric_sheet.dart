@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/ui/app_error_feedback.dart';
 import '../../../../core/widgets/app_form_sheet.dart';
 
 Future<void> showCustomMetricSheet({
@@ -95,10 +96,9 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
     );
 
     if (minValue >= maxValue) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Верхняя граница должна быть больше нижней.'),
-        ),
+      showAppErrorSnackBar(
+        context,
+        'Верхняя граница должна быть больше нижней.',
       );
       return;
     }
@@ -117,16 +117,14 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _isEditing
-                  ? 'Не удалось обновить метрику.'
-                  : 'Не удалось создать метрику.',
-            ),
-          ),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: _isEditing
+              ? 'Не удалось обновить метрику.'
+              : 'Не удалось создать метрику.',
         );
       }
     } finally {
@@ -159,10 +157,12 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Не удалось удалить метрику.')),
+        showAppErrorSnackBarForException(
+          context,
+          error,
+          fallbackMessage: 'Не удалось удалить метрику.',
         );
       }
     } finally {
@@ -185,7 +185,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
           children: [
             AppTextField(
               label: 'Название метрики',
-              hintText: 'напр. Мочевая кислота',
+              hintText: 'например, Мочевая кислота',
               controller: _nameController,
               accentColor: const Color(0xFF8B38F6),
               validator: requiredFieldValidator,
@@ -193,7 +193,7 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
             const SizedBox(height: 20),
             AppTextField(
               label: 'Единица измерения',
-              hintText: 'напр. мг/дл',
+              hintText: 'например, мг/дл',
               controller: _unitController,
               accentColor: const Color(0xFF8B38F6),
               validator: requiredFieldValidator,
@@ -201,23 +201,19 @@ class _CustomMetricSheetState extends State<CustomMetricSheet> {
             const SizedBox(height: 20),
             AppTextField(
               label: 'Нижняя граница',
-              hintText: 'напр. 3.5',
+              hintText: 'например, 3.5',
               controller: _targetMinController,
               accentColor: const Color(0xFF8B38F6),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: decimalNumberValidator,
             ),
             const SizedBox(height: 20),
             AppTextField(
               label: 'Верхняя граница',
-              hintText: 'напр. 7.2',
+              hintText: 'например, 7.2',
               controller: _targetMaxController,
               accentColor: const Color(0xFF8B38F6),
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
               validator: decimalNumberValidator,
             ),
             const SizedBox(height: 28),

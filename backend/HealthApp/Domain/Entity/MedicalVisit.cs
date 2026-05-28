@@ -20,6 +20,7 @@ namespace Domain.Entity
         [MaxLength(120)]
         public string Specialty { get; set; } = string.Empty;
 
+        [Column(TypeName = "date")]
         public DateTime AppointmentDate { get; set; }
 
         [Range(0, 1439)]
@@ -47,7 +48,8 @@ namespace Domain.Entity
                     AppointmentDate.Day,
                     TimeInMinutes / 60,
                     TimeInMinutes % 60,
-                    0);
+                    0,
+                    DateTimeKind.Utc);
             }
         }
     }

@@ -33,6 +33,8 @@ namespace Data.Repositories
 
             return await Query(asNoTracking: true)
                 .Include(x => x.Records)
+                .OrderByDescending(x => x.LastUpdatedAt)
+                .ThenBy(x => x.Title)
                 .ToListAsync(ct);
         }
 

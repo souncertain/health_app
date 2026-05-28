@@ -24,7 +24,9 @@ class ProfileRemoteDataSource {
       payload: {
         'fullName': profile.fullName,
         'email': profile.email,
+        'phone': profile.phone,
         'gender': _genderToBackend(profile.gender),
+        'birthday': profile.birthDate?.toUtc().toIso8601String(),
         'age': profile.age,
         'bloodType': profile.bloodType,
         'heightCm': profile.heightCm,
@@ -47,7 +49,11 @@ class ProfileRemoteDataSource {
         id: remoteId ?? 'profile-me',
         fullName: json['fullName'] as String? ?? '',
         email: json['email'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
         gender: _genderFromBackend(json['gender'] as String?),
+        birthDate: json['birthday'] == null
+            ? null
+            : DateTime.parse(json['birthday'] as String).toLocal(),
         age: json['age'] as int?,
         bloodType: json['bloodType'] as String?,
         heightCm: (json['heightCm'] as num?)?.toInt(),

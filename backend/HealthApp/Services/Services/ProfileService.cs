@@ -3,6 +3,7 @@ using Data.Interfaces;
 using Domain.Dto.Profile;
 using Enums;
 using Services.Interfaces;
+using Services.Validation.Infrastructure;
 using ProfileEntity = Domain.Entity.Profile;
 using UserEntity = Domain.Entity.User;
 
@@ -12,7 +13,10 @@ namespace Services.Services
     {
         private readonly IProfileRepository _profileRepository;
 
-        public ProfileService(IProfileRepository repository, IMapper mapper) : base(repository, mapper)
+        public ProfileService(
+            IProfileRepository repository,
+            IMapper mapper,
+            IRequestValidationService validationService) : base(repository, mapper, validationService)
         {
             _profileRepository = repository;
         }
@@ -28,6 +32,7 @@ namespace Services.Services
                 return new ProfilePageDto
                 {
                     Email = user?.Email ?? string.Empty,
+                    Phone = user?.Phone,
                     NotificationsEnabled = true,
                     CreatedAt = user?.CreatedAt ?? DateTime.UtcNow,
                     UpdatedAt = user?.LastUpdatedAt ?? DateTime.UtcNow,
@@ -45,6 +50,8 @@ namespace Services.Services
 
         public async Task<ProfilePageDto> SaveCurrentProfile(ProfilePageUpdateDto dto, CancellationToken ct)
         {
+            await _validationService.ValidateAndThrowAsync(dto, ct);
+
             var user = await _profileRepository.GetCurrentUser(ct);
             if (user is null)
             {
@@ -67,10 +74,11 @@ namespace Services.Services
 
             var (firstName, lastName) = SplitFullName(dto.FullName);
             var (bloodType, resusPhactor) = ParseBloodType(dto.BloodType);
+            var normalizedBirthday = NormalizeBirthday(dto.Birthday, dto.Age, now);
 
             profile.FirstName = firstName;
             profile.LastName = lastName;
-            profile.Birthday = dto.Age.HasValue ? now.Date.AddYears(-dto.Age.Value) : null;
+            profile.Birthday = normalizedBirthday;
             profile.Sex = ParseSex(dto.Gender);
             profile.Height = dto.HeightCm;
             profile.Weight = dto.WeightKg;
@@ -85,8 +93,10 @@ namespace Services.Services
             if (!string.IsNullOrWhiteSpace(dto.Email))
             {
                 user.Email = dto.Email.Trim();
-                user.LastUpdatedAt = now;
             }
+
+            user.Phone = NormalizeText(dto.Phone);
+            user.LastUpdatedAt = now;
 
             if (isNewProfile)
             {
@@ -108,7 +118,9 @@ namespace Services.Services
                 Id = profile.Id,
                 FullName = BuildFullName(profile.FirstName, profile.LastName),
                 Email = user?.Email ?? profile.User?.Email ?? string.Empty,
+                Phone = user?.Phone ?? profile.User?.Phone,
                 Gender = MapSex(profile.Sex),
+                Birthday = profile.Birthday,
                 Age = CalculateAge(profile.Birthday),
                 BloodType = FormatBloodType(profile.BloodType, profile.ResusPhactor),
                 HeightCm = profile.Height.HasValue ? (int)Math.Round(profile.Height.Value) : null,
@@ -168,6 +180,16 @@ namespace Services.Services
             }
 
             return age < 0 ? null : age;
+        }
+
+        private static DateTime? NormalizeBirthday(DateTime? birthday, int? age, DateTime now)
+        {
+            if (birthday.HasValue)
+            {
+                return DateTime.SpecifyKind(birthday.Value.Date, DateTimeKind.Utc);
+            }
+
+            return age.HasValue ? now.Date.AddYears(-age.Value) : null;
         }
 
         private static Sex? ParseSex(string? gender)

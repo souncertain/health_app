@@ -1,4 +1,5 @@
 import '../../../../core/network/api_exception.dart';
+import '../../../../core/utils/collection_extensions.dart';
 import '../../domain/entities/medication.dart';
 import '../../domain/repositories/medication_repository.dart';
 import '../datasources/medication_local_data_source.dart';
@@ -57,12 +58,10 @@ class BackendMedicationRepository implements MedicationRepository {
 
     final localVersion = _mergeRemoteWithDraft(savedRemote, medication);
     final medications = await _localDataSource.getMedications();
-    final index = medications.indexWhere((item) => item.id == medication.id);
-    if (index == -1) {
-      medications.add(MedicationModel.fromEntity(localVersion));
-    } else {
-      medications[index] = MedicationModel.fromEntity(localVersion);
-    }
+    medications.upsertWhere(
+      MedicationModel.fromEntity(localVersion),
+      (item) => item.id == medication.id,
+    );
 
     await _localDataSource.saveAll(
       _sort(medications).map(MedicationModel.fromEntity).toList(),
@@ -72,10 +71,7 @@ class BackendMedicationRepository implements MedicationRepository {
   @override
   Future<void> deleteMedication(String id) async {
     final medications = await _localDataSource.getMedications();
-    final target = medications
-        .where((item) => item.id == id)
-        .cast<Medication?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+    final target = medications.firstWhereOrNull((item) => item.id == id);
 
     if (target == null) {
       return;
@@ -138,9 +134,7 @@ class BackendMedicationRepository implements MedicationRepository {
     List<MedicationModel> localMedications,
   ) {
     final existing = localMedications
-        .where((item) => item.remoteId == remoteMedication.remoteId)
-        .cast<Medication?>()
-        .firstWhere((item) => item != null, orElse: () => null);
+        .firstWhereOrNull((item) => item.remoteId == remoteMedication.remoteId);
 
     return remoteMedication.copyWith(
       id: existing?.id ?? remoteMedication.id,
