@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../features/auth/presentation/pages/auth_gate_page.dart';
 
@@ -30,6 +31,15 @@ class HealthApp extends StatelessWidget {
         ),
         fontFamily: 'SF Pro Display',
       ),
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ru'),
+        Locale('en'),
+      ],
       home: const AuthGatePage(),
     );
   }

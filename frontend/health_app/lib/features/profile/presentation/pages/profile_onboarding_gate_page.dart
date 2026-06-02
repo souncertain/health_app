@@ -17,11 +17,13 @@ class ProfileOnboardingGatePage extends StatefulWidget {
     required this.session,
     required this.onSignOut,
     this.repository,
+    this.onboardingLocalDataSource,
   });
 
   final AuthSession session;
   final Future<void> Function() onSignOut;
   final ProfileRepository? repository;
+  final ProfileOnboardingLocalDataSource? onboardingLocalDataSource;
 
   @override
   State<ProfileOnboardingGatePage> createState() =>
@@ -35,7 +37,8 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
         localDataSource: ProfileLocalDataSource(),
         remoteDataSource: ProfileRemoteDataSource(),
       );
-  final _onboardingLocalDataSource = ProfileOnboardingLocalDataSource();
+  late final ProfileOnboardingLocalDataSource _onboardingLocalDataSource =
+      widget.onboardingLocalDataSource ?? ProfileOnboardingLocalDataSource();
 
   bool _isLoading = true;
   bool _shouldShowOnboarding = false;
@@ -44,51 +47,52 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
   @override
   void initState() {
     super.initState();
+    _initialProfile = _seedProfile(UserProfile.empty());
     _load();
   }
 
   Future<void> _load() async {
-    final dismissed = await _onboardingLocalDataSource.isDismissed();
-    final profile =
-        await _repository.getProfile() ??
-        await _repository.getCachedProfile() ??
-        UserProfile.empty();
-    final seededProfile = _seedProfile(profile);
+    setState(() => _isLoading = true);
 
-    if (!mounted) {
-      return;
+    try {
+      final dismissed = await _onboardingLocalDataSource.isDismissed();
+      final cachedProfile = await _repository.getCachedProfile();
+      final initialProfile = _seedProfile(cachedProfile ?? UserProfile.empty());
+
+      if (mounted) {
+        setState(() {
+          _initialProfile = initialProfile;
+          _shouldShowOnboarding =
+              !dismissed &&
+              !ProfileOnboardingController.isProfileSetupCompleted(
+                initialProfile,
+              );
+        });
+      }
+
+      final remoteProfile = await _repository.getProfile();
+      final effectiveProfile = _seedProfile(remoteProfile ?? initialProfile);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _initialProfile = effectiveProfile;
+        _shouldShowOnboarding =
+            !dismissed &&
+            !ProfileOnboardingController.isProfileSetupCompleted(
+              effectiveProfile,
+            );
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-
-    setState(() {
-      _initialProfile = seededProfile;
-      _shouldShowOnboarding =
-          !dismissed &&
-          !ProfileOnboardingController.isProfileSetupCompleted(seededProfile);
-      _isLoading = false;
-    });
   }
 
-  UserProfile _seedProfile(UserProfile profile) {
-    final now = DateTime.now();
-    final hasDisplayName =
-        widget.session.displayName.trim().isNotEmpty &&
-        widget.session.displayName.trim().toLowerCase() != 'user';
-
-    return profile.copyWith(
-      fullName: profile.fullName.trim().isNotEmpty
-          ? profile.fullName
-          : (hasDisplayName ? widget.session.displayName.trim() : profile.fullName),
-      email: profile.email.trim().isNotEmpty
-          ? profile.email
-          : widget.session.email.trim(),
-      createdAt: profile.createdAt,
-      updatedAt: profile.updatedAt == UserProfile.empty().updatedAt
-          ? now
-          : profile.updatedAt,
-    );
-  }
-
-  Future<void> _handleSkipped() async {
+  Future<void> _skipOnboarding() async {
     await _onboardingLocalDataSource.setDismissed(true);
     if (!mounted) {
       return;
@@ -97,7 +101,7 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
     setState(() => _shouldShowOnboarding = false);
   }
 
-  Future<void> _handleCompleted() async {
+  Future<void> _completeOnboarding() async {
     await _onboardingLocalDataSource.setDismissed(false);
     if (!mounted) {
       return;
@@ -106,18 +110,30 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
     setState(() => _shouldShowOnboarding = false);
   }
 
+  UserProfile _seedProfile(UserProfile profile) {
+    final email = profile.email.trim().isEmpty
+        ? widget.session.email.trim()
+        : profile.email.trim();
+    final fullName = profile.fullName.trim().isEmpty
+        ? widget.session.displayName.trim()
+        : profile.fullName.trim();
+
+    return profile.copyWith(
+      email: email,
+      fullName: fullName,
+      remoteId:
+          (profile.remoteId?.trim().isNotEmpty ?? false)
+              ? profile.remoteId
+              : widget.session.userId,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFF1FBF4), Color(0xFFEAF9F1)],
-          ),
-        ),
-        child: const Center(
+      return const Scaffold(
+        backgroundColor: Color(0xFFF2FBF3),
+        body: Center(
           child: CircularProgressIndicator(color: Color(0xFF1DB954)),
         ),
       );
@@ -127,8 +143,8 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
       return ProfileOnboardingPage(
         initialProfile: _initialProfile,
         repository: _repository,
-        onSkipped: _handleSkipped,
-        onCompleted: _handleCompleted,
+        onSkipped: _skipOnboarding,
+        onCompleted: _completeOnboarding,
       );
     }
 

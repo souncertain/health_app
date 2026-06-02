@@ -123,7 +123,7 @@ class ProfileOnboardingController extends ChangeNotifier {
       years--;
     }
 
-    return years.clamp(0, 130);
+    return years.clamp(0, 130).toInt();
   }
 
   static String? canonicalBloodTypeFromLocalized(String? value) {

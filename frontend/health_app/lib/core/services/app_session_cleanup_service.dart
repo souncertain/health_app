@@ -2,6 +2,7 @@ import '../../features/dashboard/data/datasources/blood_pressure_local_data_sour
 import '../../features/meds/data/datasources/medication_local_data_source.dart';
 import '../../features/metrics/data/datasources/health_metrics_local_data_source.dart';
 import '../../features/profile/data/datasources/profile_local_data_source.dart';
+import '../../features/profile/data/datasources/profile_onboarding_local_data_source.dart';
 import '../../features/visits/data/datasources/medical_visits_local_data_source.dart';
 import 'local_notifications_service.dart';
 
@@ -12,6 +13,7 @@ class AppSessionCleanupService {
     HealthMetricsLocalDataSource? healthMetricsLocalDataSource,
     MedicalVisitsLocalDataSource? medicalVisitsLocalDataSource,
     ProfileLocalDataSource? profileLocalDataSource,
+    ProfileOnboardingLocalDataSource? profileOnboardingLocalDataSource,
     LocalNotificationsService? notificationsService,
   }) : _bloodPressureLocalDataSource =
            bloodPressureLocalDataSource ?? BloodPressureLocalDataSource(),
@@ -23,6 +25,9 @@ class AppSessionCleanupService {
            medicalVisitsLocalDataSource ?? MedicalVisitsLocalDataSource(),
        _profileLocalDataSource =
            profileLocalDataSource ?? ProfileLocalDataSource(),
+       _profileOnboardingLocalDataSource =
+           profileOnboardingLocalDataSource ??
+           ProfileOnboardingLocalDataSource(),
        _notificationsService =
            notificationsService ?? LocalNotificationsService.instance;
 
@@ -31,6 +36,7 @@ class AppSessionCleanupService {
   final HealthMetricsLocalDataSource _healthMetricsLocalDataSource;
   final MedicalVisitsLocalDataSource _medicalVisitsLocalDataSource;
   final ProfileLocalDataSource _profileLocalDataSource;
+  final ProfileOnboardingLocalDataSource _profileOnboardingLocalDataSource;
   final LocalNotificationsService _notificationsService;
 
   Future<void> clearUserScopedData() async {
@@ -41,6 +47,7 @@ class AppSessionCleanupService {
       _ignoreErrors(_healthMetricsLocalDataSource.clear()),
       _ignoreErrors(_medicalVisitsLocalDataSource.clear()),
       _ignoreErrors(_profileLocalDataSource.clear()),
+      _ignoreErrors(_profileOnboardingLocalDataSource.clear()),
     ]);
   }
 

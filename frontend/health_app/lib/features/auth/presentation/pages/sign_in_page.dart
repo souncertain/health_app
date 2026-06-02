@@ -81,11 +81,7 @@ class _SignInPageState extends State<SignInPage> {
       _showMessage(
         'На вашу электронную почту отправлен код подтверждения. Введите его, чтобы завершить регистрацию.',
       );
-      await showEmailConfirmationSheet(
-        context,
-        controller: widget.controller,
-        email: result.email,
-      );
+      await _openEmailConfirmation(result.email);
     } on AuthException catch (error) {
       _showError(error,'Не удалось создать аккаунт. Попробуйте ещё раз.');
     } catch (_) {
@@ -127,6 +123,17 @@ class _SignInPageState extends State<SignInPage> {
     _emailController.text = restoredEmail;
     _passwordController.clear();
     _showMessage('Ваш пароль обновлён. Теперь вы можете войти с новым паролем..');
+  }
+
+  Future<void> _openEmailConfirmation([String? email]) {
+    return showEmailConfirmationSheet(
+      context,
+      controller: widget.controller,
+      email:
+          email ??
+          widget.controller.pendingConfirmationEmail ??
+          _emailController.text.trim(),
+    );
   }
 
   void _showMessage(String message) {
@@ -382,6 +389,26 @@ class _SignInPageState extends State<SignInPage> {
                           ),
                         ),
                       ),
+                      if ((widget.controller.pendingConfirmationEmail?.isNotEmpty ??
+                          false)) ...[
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: TextButton(
+                            onPressed: widget.controller.isSubmitting
+                                ? null
+                                : _openEmailConfirmation,
+                            child: const Text(
+                              'У меня уже есть код подтверждения',
+                              style: TextStyle(
+                                color: Color(0xFF1AA84D),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                       const SizedBox(height: 24),
                       _SocialButton(
                         backgroundColor: Colors.white,

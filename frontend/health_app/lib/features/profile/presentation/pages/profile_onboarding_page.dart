@@ -114,12 +114,9 @@ class _ProfileOnboardingPageState extends State<ProfileOnboardingPage> {
 
   Future<void> _finishOnboarding({bool saveOptionalStep = true}) async {
     setState(() => _showPersonalInfoValidation = true);
-    final isPersonalInfoValid =
-        (_personalInfoFormKey.currentState?.validate() ?? false) &&
-        _selectedBirthday != null &&
-        _selectedGender != ProfileGender.unspecified;
+    final isPersonalInfoValid = _isPersonalInfoDataValid();
     if (!isPersonalInfoValid) {
-      _controller.start();
+      _controller.goBack();
       return;
     }
 
@@ -227,11 +224,7 @@ class _ProfileOnboardingPageState extends State<ProfileOnboardingPage> {
     return SingleChildScrollView(
       key: const ValueKey('onboarding-welcome'),
       padding: const EdgeInsets.fromLTRB(28, 24, 28, 36),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          minHeight: MediaQuery.sizeOf(context).height - MediaQuery.paddingOf(context).top - 60,
-        ),
-        child: Column(
+      child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 36),
@@ -277,7 +270,7 @@ class _ProfileOnboardingPageState extends State<ProfileOnboardingPage> {
                 height: 1.5,
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 56),
             SizedBox(
               width: double.infinity,
               child: FilledButton(
@@ -336,7 +329,6 @@ class _ProfileOnboardingPageState extends State<ProfileOnboardingPage> {
               ],
             ),
           ],
-        ),
       ),
     );
   }
@@ -711,6 +703,13 @@ class _ProfileOnboardingPageState extends State<ProfileOnboardingPage> {
     }
 
     return null;
+  }
+
+  bool _isPersonalInfoDataValid() {
+    return _requiredTextValidator(_firstNameController.text) == null &&
+        _requiredTextValidator(_lastNameController.text) == null &&
+        _selectedBirthday != null &&
+        _selectedGender != ProfileGender.unspecified;
   }
 
   String? _optionalPhoneValidator(String? value) {

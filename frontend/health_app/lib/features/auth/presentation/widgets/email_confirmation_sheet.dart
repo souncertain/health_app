@@ -64,9 +64,12 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
 
       Navigator.of(context).pop();
     } on AuthException catch (error) {
-      _showError(error, 'Could not confirm the email. Please try again.');
+      _showError(
+        error,
+        'Не удалось подтвердить почту. Попробуйте ещё раз.',
+      );
     } catch (_) {
-      _showMessage('Could not confirm the email. Please try again.');
+      _showMessage('Не удалось подтвердить почту. Попробуйте ещё раз.');
     }
   }
 
@@ -79,11 +82,11 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
         return;
       }
 
-      _showMessage('We sent a new confirmation code to the email address.');
+      _showMessage('Новый код подтверждения уже отправлен на вашу почту.');
     } on AuthException catch (error) {
-      _showError(error, 'Could not resend the confirmation code.');
+      _showError(error, 'Не удалось отправить код повторно.');
     } catch (_) {
-      _showMessage('Could not resend the confirmation code.');
+      _showMessage('Не удалось отправить код повторно.');
     }
   }
 
@@ -104,10 +107,10 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
     const accentColor = Color(0xFF1DB954);
 
     return AppFormSheet(
-      title: 'Confirm your email',
+      title: 'Подтвердите почту',
       busy: widget.controller.isSubmitting,
       subtitle: const Text(
-        'We sent a one-time confirmation code to your email. Enter it below to finish creating the account and open the app.',
+        'Мы отправили одноразовый код на указанную почту. Введите его ниже, чтобы завершить регистрацию и войти в приложение.',
         style: TextStyle(
           color: Color(0xFF61738F),
           fontSize: 15,
@@ -121,8 +124,8 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             AppTextField(
-              label: 'Email',
-              hintText: 'Your registration email',
+              label: 'Электронная почта',
+              hintText: 'Почта, указанная при регистрации',
               controller: _emailController,
               accentColor: accentColor,
               keyboardType: TextInputType.emailAddress,
@@ -130,18 +133,18 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
             ),
             const SizedBox(height: 20),
             AppTextField(
-              label: 'Confirmation code',
-              hintText: 'Enter the code from the email',
+              label: 'Код подтверждения',
+              hintText: 'Введите код из письма',
               controller: _codeController,
               accentColor: accentColor,
               keyboardType: TextInputType.number,
               validator: (value) {
                 final trimmed = value?.trim() ?? '';
                 if (trimmed.isEmpty) {
-                  return 'Enter the confirmation code';
+                  return 'Введите код подтверждения';
                 }
                 if (trimmed.length < 4) {
-                  return 'The code looks too short';
+                  return 'Код слишком короткий';
                 }
                 return null;
               },
@@ -151,7 +154,7 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
               width: double.infinity,
               child: AppBusyFilledButton(
                 busy: widget.controller.isSubmitting,
-                label: 'Confirm email',
+                label: 'Подтвердить почту',
                 color: accentColor,
                 onPressed: _confirmEmail,
               ),
@@ -161,7 +164,7 @@ class _EmailConfirmationSheetState extends State<EmailConfirmationSheet> {
               width: double.infinity,
               child: AppBusyOutlinedButton(
                 busy: widget.controller.isSubmitting,
-                label: 'Send code again',
+                label: 'Отправить код повторно',
                 color: accentColor,
                 onPressed: _resendCode,
               ),

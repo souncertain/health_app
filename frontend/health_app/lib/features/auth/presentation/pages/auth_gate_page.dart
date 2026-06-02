@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../app/presentation/pages/home_shell_page.dart';
 import '../../../../core/services/app_session_cleanup_service.dart';
+import '../../../profile/presentation/pages/profile_onboarding_gate_page.dart';
 import '../../data/datasources/auth_local_data_source.dart';
 import '../../data/datasources/auth_remote_data_source.dart';
 import '../../data/datasources/secure_credentials_data_source.dart';
@@ -51,7 +51,10 @@ class _AuthGatePageState extends State<AuthGatePage> {
         }
 
         if (_controller.isAuthenticated) {
-          return HomeShellPage(onSignOut: _controller.signOut);
+          return ProfileOnboardingGatePage(
+            session: _controller.session!,
+            onSignOut: _controller.signOut,
+          );
         }
 
         return SignInPage(controller: _controller);

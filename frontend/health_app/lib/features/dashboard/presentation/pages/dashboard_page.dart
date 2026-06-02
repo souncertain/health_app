@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../core/layout/app_layout_constants.dart';
+import '../../../profile/data/datasources/profile_local_data_source.dart';
 import '../../data/datasources/blood_pressure_local_data_source.dart';
 import '../../data/repositories/local_blood_pressure_repository.dart';
 import '../../domain/entities/blood_pressure_reading.dart';
@@ -20,9 +21,14 @@ import '../widgets/dashboard_reading_card.dart';
 import 'all_readings_page.dart';
 
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key, this.repository});
+  const DashboardPage({
+    super.key,
+    this.repository,
+    this.profileLocalDataSource,
+  });
 
   final BloodPressureRepository? repository;
+  final ProfileLocalDataSource? profileLocalDataSource;
 
   @override
   State<DashboardPage> createState() => DashboardPageState();
@@ -30,8 +36,11 @@ class DashboardPage extends StatefulWidget {
 
 class DashboardPageState extends State<DashboardPage> {
   late final DashboardController _controller;
+  late final ProfileLocalDataSource _profileLocalDataSource =
+      widget.profileLocalDataSource ?? ProfileLocalDataSource();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   DashboardHistoryRange _selectedHistoryRange = DashboardHistoryRange.sevenDays;
+  String _displayName = 'Пользователь';
 
   @override
   void initState() {
@@ -45,6 +54,7 @@ class DashboardPageState extends State<DashboardPage> {
       deleteReading: DeleteBloodPressureReadingUseCase(repository),
     );
     _controller.initialize();
+    unawaited(_loadProfileDisplayName());
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
       results,
     ) {
@@ -54,6 +64,35 @@ class DashboardPageState extends State<DashboardPage> {
 
       unawaited(_controller.refresh());
     });
+  }
+
+  Future<void> _loadProfileDisplayName() async {
+    final profile = await _profileLocalDataSource.getProfile();
+    if (!mounted) {
+      return;
+    }
+
+    final displayName = _resolveDisplayName(profile?.fullName);
+    if (displayName == _displayName) {
+      return;
+    }
+
+    setState(() {
+      _displayName = displayName;
+    });
+  }
+
+  String _resolveDisplayName(String? fullName) {
+    final trimmed = (fullName ?? '').trim();
+    if (trimmed.isEmpty) {
+      return 'Пользователь';
+    }
+
+    final parts = trimmed
+        .split(RegExp(r'\s+'))
+        .where((value) => value.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? 'Пользователь' : parts.first;
   }
 
   @override
@@ -142,6 +181,7 @@ class DashboardPageState extends State<DashboardPage> {
                       children: [
                         _DashboardHeroSection(
                           latestReading: latestReading,
+                          displayName: _displayName,
                           isCompact: isCompact,
                           horizontalPadding: horizontalPadding,
                         ),
@@ -361,11 +401,13 @@ class DashboardPageState extends State<DashboardPage> {
 class _DashboardHeroSection extends StatelessWidget {
   const _DashboardHeroSection({
     required this.latestReading,
+    required this.displayName,
     required this.isCompact,
     required this.horizontalPadding,
   });
 
   final BloodPressureReading? latestReading;
+  final String displayName;
   final bool isCompact;
   final double horizontalPadding;
 
@@ -406,7 +448,7 @@ class _DashboardHeroSection extends StatelessWidget {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Матвей Фетисов', //TODO Take name from profile with backend
+                        displayName,
                         style: theme.textTheme.headlineLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,

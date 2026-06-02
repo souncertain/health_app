@@ -87,6 +87,24 @@ class ProfilePageState extends State<ProfilePage> {
     );
   }
 
+  Future<void> _editPhone() {
+    return showProfileFieldEditSheet(
+      context: context,
+      title: 'Телефон',
+      label: 'Телефон',
+      hintText: '+7 (999) 123-45-67',
+      initialValue: _controller.profile.phone,
+      keyboardType: TextInputType.phone,
+      validator: _phoneValidator,
+      onSubmit: (value) => _savePatchedProfile(
+        _controller.profile.copyWith(
+          phone: value.trim(),
+          updatedAt: DateTime.now(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _editHeight() {
     return showProfileFieldEditSheet(
       context: context,
@@ -255,6 +273,30 @@ class ProfilePageState extends State<ProfilePage> {
                   ),
                   const SizedBox(height: 14),
                   _StatsRow(stats: stats),
+                  const SizedBox(height: 14),
+                  _SectionCard(
+                    title: 'Личные данные',
+                    titleColor: const Color(0xFF18B552),
+                    children: [
+                      _InfoRow(
+                        icon: Icons.phone_rounded,
+                        iconColor: const Color(0xFF18B552),
+                        label: 'Телефон',
+                        value: profile.phone.trim().isEmpty
+                            ? 'Не указано'
+                            : profile.phone.trim(),
+                        onTap: _editPhone,
+                      ),
+                      _InfoRow(
+                        icon: Icons.cake_outlined,
+                        iconColor: const Color(0xFF1595C9),
+                        label: 'Возраст',
+                        value: profile.displayAge == null
+                            ? 'Не указано'
+                            : '${profile.displayAge} лет',
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 14),
                   _SectionCard(
                     title: 'Сводка здоровья',
@@ -481,6 +523,20 @@ class ProfilePageState extends State<ProfilePage> {
     }
     return trimmed.contains('@') ? null : 'Введите корректный e-mail';
   }
+
+  String? _phoneValidator(String? value) {
+    final trimmed = value?.trim() ?? '';
+    if (trimmed.isEmpty) {
+      return null;
+    }
+
+    final digits = trimmed.replaceAll(RegExp(r'\D'), '');
+    if (!trimmed.startsWith('+7') || digits.length != 11) {
+      return 'Введите телефон в формате +7 (999) 123-45-67';
+    }
+
+    return null;
+  }
 }
 
 class _ProfileHeader extends StatelessWidget {
@@ -501,7 +557,7 @@ class _ProfileHeader extends StatelessWidget {
     final chips = <String>[
       if (profile.gender != ProfileGender.unspecified)
         profile.gender.displayLabel,
-      if (profile.age != null) '${profile.age} лет',
+      if (profile.displayAge != null) '${profile.displayAge} лет',
     ];
 
     return Container(

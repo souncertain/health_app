@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import '../config/app_config.dart';
 import '../../features/auth/data/datasources/auth_local_data_source.dart';
@@ -7,6 +8,20 @@ import '../../features/auth/data/datasources/auth_remote_data_source.dart';
 import '../../features/auth/data/models/auth_session_model.dart';
 import '../../features/auth/domain/auth_exception.dart';
 import 'api_exception.dart';
+
+class ApiMultipartFile {
+  const ApiMultipartFile({
+    required this.fieldName,
+    required this.fileName,
+    required this.contentType,
+    required this.bytes,
+  });
+
+  final String fieldName;
+  final String fileName;
+  final String contentType;
+  final Uint8List bytes;
+}
 
 class AuthenticatedApiClient {
   static final HttpClient _sharedHttpClient = HttpClient()
@@ -68,6 +83,24 @@ class AuthenticatedApiClient {
       method: 'DELETE',
       path: path,
       queryParameters: queryParameters,
+    );
+  }
+
+  Future<dynamic> postMultipart(
+    String path, {
+    required List<ApiMultipartFile> files,
+    Map<String, String>? fields,
+    Map<String, String>? queryParameters,
+  }) async {
+    final session = await _getValidSession();
+    final uri = _buildUri(path, queryParameters);
+
+    return _sendAuthorizedMultipart(
+      uri: uri,
+      accessToken: session.accessToken,
+      files: files,
+      fields: fields ?? const {},
+      allowRefreshRetry: true,
     );
   }
 
@@ -155,51 +188,17 @@ class AuthenticatedApiClient {
       }
 
       final response = await request.close();
-      final body = await response.transform(utf8.decoder).join();
-      final decoded = _decodeBody(body);
-
-      if (response.statusCode == 401 && allowRefreshRetry) {
-        final currentSession = await _authLocalDataSource.getSession();
-        if (currentSession == null) {
-          throw const ApiUnauthorizedException();
-        }
-
-        final refreshed = await _refreshSession(currentSession);
-        return _sendAuthorizedJson(
+      return _handleResponse(
+        response,
+        allowRefreshRetry: allowRefreshRetry,
+        retry: (refreshedToken) => _sendAuthorizedJson(
           method: method,
           uri: uri,
-          accessToken: refreshed.accessToken,
+          accessToken: refreshedToken,
           payload: payload,
           allowRefreshRetry: false,
-        );
-      }
-
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        final payloadMap = decoded is Map<String, dynamic> ? decoded : null;
-        final message = payloadMap?['message'] as String?;
-        final uiMessage = _extractUiMessage(payloadMap);
-        final fieldErrors = _parseFieldErrors(payloadMap?['errors']);
-
-        if ((uiMessage?.isNotEmpty ?? false) || fieldErrors.isNotEmpty) {
-          throw ApiValidationException(
-            message ?? 'Validation failed.',
-            uiMessage:
-                uiMessage ??
-                _firstFieldError(fieldErrors) ??
-                message ??
-                'Validation failed.',
-            fieldErrors: fieldErrors,
-            statusCode: response.statusCode,
-          );
-        }
-
-        throw ApiException(
-          message ?? 'Request failed with status ${response.statusCode}.',
-          statusCode: response.statusCode,
-        );
-      }
-
-      return decoded;
+        ),
+      );
     } on SocketException {
       throw const ApiNetworkException();
     } on HttpException {
@@ -209,6 +208,104 @@ class AuthenticatedApiClient {
         'Secure connection to the backend failed.',
       );
     }
+  }
+
+  Future<dynamic> _sendAuthorizedMultipart({
+    required Uri uri,
+    required String accessToken,
+    required List<ApiMultipartFile> files,
+    required Map<String, String> fields,
+    required bool allowRefreshRetry,
+  }) async {
+    try {
+      final request = await _httpClient.postUrl(uri);
+      request.headers.set(HttpHeaders.acceptHeader, ContentType.json.mimeType);
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer $accessToken',
+      );
+
+      final boundary =
+          '----healthapp-boundary-${DateTime.now().microsecondsSinceEpoch}';
+      request.headers.set(
+        HttpHeaders.contentTypeHeader,
+        'multipart/form-data; boundary=$boundary',
+      );
+
+      final body = _buildMultipartBody(
+        boundary: boundary,
+        files: files,
+        fields: fields,
+      );
+      request.add(body);
+
+      final response = await request.close();
+      return _handleResponse(
+        response,
+        allowRefreshRetry: allowRefreshRetry,
+        retry: (refreshedToken) => _sendAuthorizedMultipart(
+          uri: uri,
+          accessToken: refreshedToken,
+          files: files,
+          fields: fields,
+          allowRefreshRetry: false,
+        ),
+      );
+    } on SocketException {
+      throw const ApiNetworkException();
+    } on HttpException {
+      throw const ApiNetworkException();
+    } on HandshakeException {
+      throw const ApiNetworkException(
+        'Secure connection to the backend failed.',
+      );
+    }
+  }
+
+  Future<dynamic> _handleResponse(
+    HttpClientResponse response, {
+    required bool allowRefreshRetry,
+    required Future<dynamic> Function(String refreshedToken) retry,
+  }) async {
+    final body = await response.transform(utf8.decoder).join();
+    final decoded = _decodeBody(body);
+
+    if (response.statusCode == 401 && allowRefreshRetry) {
+      final currentSession = await _authLocalDataSource.getSession();
+      if (currentSession == null) {
+        throw const ApiUnauthorizedException();
+      }
+
+      final refreshed = await _refreshSession(currentSession);
+      return retry(refreshed.accessToken);
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final payloadMap = decoded is Map<String, dynamic> ? decoded : null;
+      final message = payloadMap?['message'] as String?;
+      final uiMessage = _extractUiMessage(payloadMap);
+      final fieldErrors = _parseFieldErrors(payloadMap?['errors']);
+
+      if ((uiMessage?.isNotEmpty ?? false) || fieldErrors.isNotEmpty) {
+        throw ApiValidationException(
+          message ?? 'Validation failed.',
+          uiMessage:
+              uiMessage ??
+              _firstFieldError(fieldErrors) ??
+              message ??
+              'Validation failed.',
+          fieldErrors: fieldErrors,
+          statusCode: response.statusCode,
+        );
+      }
+
+      throw ApiException(
+        message ?? 'Request failed with status ${response.statusCode}.',
+        statusCode: response.statusCode,
+      );
+    }
+
+    return decoded;
   }
 
   Future<HttpClientRequest> _openRequest(String method, Uri uri) {
@@ -243,6 +340,41 @@ class AuthenticatedApiClient {
     }
 
     return jsonDecode(trimmed);
+  }
+
+  Uint8List _buildMultipartBody({
+    required String boundary,
+    required List<ApiMultipartFile> files,
+    required Map<String, String> fields,
+  }) {
+    final builder = BytesBuilder(copy: false);
+    final boundaryLine = '--$boundary\r\n';
+
+    for (final entry in fields.entries) {
+      builder.add(utf8.encode(boundaryLine));
+      builder.add(
+        utf8.encode(
+          'Content-Disposition: form-data; name="${entry.key}"\r\n\r\n',
+        ),
+      );
+      builder.add(utf8.encode(entry.value));
+      builder.add(utf8.encode('\r\n'));
+    }
+
+    for (final file in files) {
+      builder.add(utf8.encode(boundaryLine));
+      builder.add(
+        utf8.encode(
+          'Content-Disposition: form-data; name="${file.fieldName}"; filename="${file.fileName}"\r\n',
+        ),
+      );
+      builder.add(utf8.encode('Content-Type: ${file.contentType}\r\n\r\n'));
+      builder.add(file.bytes);
+      builder.add(utf8.encode('\r\n'));
+    }
+
+    builder.add(utf8.encode('--$boundary--\r\n'));
+    return builder.takeBytes();
   }
 
   Map<String, List<String>> _parseFieldErrors(dynamic rawErrors) {

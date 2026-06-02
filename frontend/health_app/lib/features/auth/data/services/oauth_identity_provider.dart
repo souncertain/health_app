@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_appauth/flutter_appauth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -12,12 +13,16 @@ class OAuthIdentityProvider {
     FlutterAppAuth? appAuth,
     GoogleSignIn? googleSignIn,
   }) : _appAuth = appAuth ?? const FlutterAppAuth(),
-       _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+       _googleSignIn =
+           googleSignIn ??
+           GoogleSignIn(
+             scopes: const ['email', 'profile', 'openid'],
+             clientId: _googleIosClientId.isEmpty ? null : _googleIosClientId,
+             serverClientId: _googleServerClientId,
+           );
 
   final FlutterAppAuth _appAuth;
   final GoogleSignIn _googleSignIn;
-
-  bool _isGoogleInitialized = false;
 
   static const _redirectUri = String.fromEnvironment(
     'AUTH_REDIRECT_URI',
@@ -25,7 +30,6 @@ class OAuthIdentityProvider {
   );
   static const _googleServerClientId = String.fromEnvironment(
     'GOOGLE_SERVER_CLIENT_ID',
-    defaultValue: String.fromEnvironment('GOOGLE_OAUTH_CLIENT_ID'),
   );
   static const _googleIosClientId = String.fromEnvironment(
     'GOOGLE_IOS_CLIENT_ID',
@@ -47,9 +51,7 @@ class OAuthIdentityProvider {
 
   Future<void> signOut() async {
     try {
-      if (_isGoogleInitialized) {
-        await _googleSignIn.signOut();
-      }
+      await _googleSignIn.signOut();
     } catch (_) {
       return;
     }
@@ -63,9 +65,19 @@ class OAuthIdentityProvider {
     }
 
     try {
-      await _ensureGoogleInitialized();
-      final account = await _googleSignIn.authenticate();
-      final authentication = account.authentication;
+      final account = await _googleSignIn
+          .signIn()
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw const AuthException(
+              'Google sign-in timed out before returning a credential.',
+            ),
+          );
+      if (account == null) {
+        throw const AuthException('Google sign-in was canceled.');
+      }
+
+      final authentication = await account.authentication;
       final idToken = authentication.idToken?.trim() ?? '';
 
       if (idToken.isEmpty) {
@@ -80,23 +92,28 @@ class OAuthIdentityProvider {
         email: account.email.trim(),
         displayName: account.displayName?.trim(),
       );
-    } on GoogleSignInException catch (error) {
-      switch (error.code) {
-        case GoogleSignInExceptionCode.canceled:
-          throw const AuthException('Google sign-in was canceled.');
-        case GoogleSignInExceptionCode.clientConfigurationError:
-        case GoogleSignInExceptionCode.providerConfigurationError:
-          throw const AuthException(
-            'Google sign-in is not configured correctly. Check client IDs, package name, and SHA fingerprint.',
-          );
-        default:
-          final description = error.description?.trim() ?? '';
-          throw AuthException(
-            description.isNotEmpty
-                ? description
-                : 'Could not complete Google sign-in.',
-          );
+    } on PlatformException catch (error) {
+      final code = error.code.trim();
+      final message = (error.message ?? '').trim();
+
+      if (code == 'sign_in_canceled' ||
+          code == 'network_error' && message.contains('canceled')) {
+        throw const AuthException('Google sign-in was canceled.');
       }
+
+      if (code == 'sign_in_failed' ||
+          code == 'network_error' ||
+          message.contains('10:') ||
+          message.contains('12500') ||
+          message.contains('12501')) {
+        throw const AuthException(
+          'Google sign-in is not configured correctly. Check client IDs, package name, SHA fingerprint, and the selected Google account.',
+        );
+      }
+
+      throw AuthException(
+        message.isNotEmpty ? message : 'Could not complete Google sign-in.',
+      );
     } on AuthException {
       rethrow;
     } catch (_) {
@@ -152,18 +169,6 @@ class OAuthIdentityProvider {
     } catch (_) {
       throw const AuthException('Could not complete Yandex sign-in.');
     }
-  }
-
-  Future<void> _ensureGoogleInitialized() async {
-    if (_isGoogleInitialized) {
-      return;
-    }
-
-    await _googleSignIn.initialize(
-      clientId: _googleIosClientId.isEmpty ? null : _googleIosClientId,
-      serverClientId: _googleServerClientId,
-    );
-    _isGoogleInitialized = true;
   }
 
   Map<String, dynamic>? _decodeJwtClaims(String? token) {
