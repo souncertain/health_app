@@ -43,6 +43,7 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
   bool _isLoading = true;
   bool _shouldShowOnboarding = false;
   late UserProfile _initialProfile;
+  late final String _userKey = _resolveUserKey(widget.session);
 
   @override
   void initState() {
@@ -55,7 +56,8 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
     setState(() => _isLoading = true);
 
     try {
-      final dismissed = await _onboardingLocalDataSource.isDismissed();
+      final dismissed = await _onboardingLocalDataSource.isDismissed(_userKey);
+      final completed = await _onboardingLocalDataSource.isCompleted(_userKey);
       final cachedProfile = await _repository.getCachedProfile();
       final initialProfile = _seedProfile(cachedProfile ?? UserProfile.empty());
 
@@ -64,6 +66,7 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
           _initialProfile = initialProfile;
           _shouldShowOnboarding =
               !dismissed &&
+              !completed &&
               !ProfileOnboardingController.isProfileSetupCompleted(
                 initialProfile,
               );
@@ -81,6 +84,7 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
         _initialProfile = effectiveProfile;
         _shouldShowOnboarding =
             !dismissed &&
+            !completed &&
             !ProfileOnboardingController.isProfileSetupCompleted(
               effectiveProfile,
             );
@@ -93,7 +97,8 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
   }
 
   Future<void> _skipOnboarding() async {
-    await _onboardingLocalDataSource.setDismissed(true);
+    await _onboardingLocalDataSource.setDismissed(_userKey, true);
+    await _onboardingLocalDataSource.setCompleted(_userKey, false);
     if (!mounted) {
       return;
     }
@@ -102,7 +107,8 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
   }
 
   Future<void> _completeOnboarding() async {
-    await _onboardingLocalDataSource.setDismissed(false);
+    await _onboardingLocalDataSource.setDismissed(_userKey, false);
+    await _onboardingLocalDataSource.setCompleted(_userKey, true);
     if (!mounted) {
       return;
     }
@@ -126,6 +132,20 @@ class _ProfileOnboardingGatePageState extends State<ProfileOnboardingGatePage> {
               ? profile.remoteId
               : widget.session.userId,
     );
+  }
+
+  static String _resolveUserKey(AuthSession session) {
+    final userId = session.userId.trim();
+    if (userId.isNotEmpty) {
+      return userId;
+    }
+
+    final email = session.email.trim();
+    if (email.isNotEmpty) {
+      return email;
+    }
+
+    return 'anonymous-user';
   }
 
   @override
