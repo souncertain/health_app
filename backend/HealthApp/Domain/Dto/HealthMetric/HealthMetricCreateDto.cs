@@ -1,5 +1,4 @@
 ﻿using Enums;
-using System.ComponentModel.DataAnnotations;
 
 namespace Domain.Dto.HealthMetric
 {

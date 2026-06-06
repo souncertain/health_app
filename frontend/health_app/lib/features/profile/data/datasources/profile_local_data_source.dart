@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,8 +10,14 @@ class ProfileLocalDataSource {
 
   static const profileStorageKey = 'profile.user_profile';
   static const notificationsEnabledStorageKey = 'profile.notifications_enabled';
+  static final StreamController<UserProfileModel?> _profileUpdatesController =
+      StreamController<UserProfileModel?>.broadcast();
   UserProfileModel? _cachedProfile;
   bool _hasLoadedCache = false;
+
+  Stream<UserProfileModel?> watchProfileChanges() {
+    return _profileUpdatesController.stream;
+  }
 
   Future<UserProfileModel?> getProfile() async {
     if (_hasLoadedCache) {
@@ -58,6 +65,7 @@ class ProfileLocalDataSource {
     );
     _cachedProfile = profile;
     _hasLoadedCache = true;
+    _profileUpdatesController.add(profile);
   }
 
   Future<void> clear() async {
@@ -66,5 +74,6 @@ class ProfileLocalDataSource {
     await preferences.remove(notificationsEnabledStorageKey);
     _cachedProfile = null;
     _hasLoadedCache = true;
+    _profileUpdatesController.add(null);
   }
 }

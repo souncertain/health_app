@@ -64,3 +64,42 @@ BloodPressureCategoryStyle resolveBloodPressureCategoryStyle(
       );
   }
 }
+
+BloodPressureCategoryStyle resolveBloodPressureCategoryKeyStyle(
+  String category,
+) {
+  switch (category) {
+    case 'requiresPediatricAssessment':
+      return const BloodPressureCategoryStyle(
+        label: 'Детская оценка',
+        accent: Color(0xFF2563EB),
+        softBackground: Color(0xFFE8F0FF),
+        iconBackground: Color(0xFFDDE9FF),
+        icon: Icons.child_care_rounded,
+      );
+    case 'normal':
+      return resolveBloodPressureCategoryStyle(BloodPressureCategory.normal);
+    case 'elevated':
+      return resolveBloodPressureCategoryStyle(BloodPressureCategory.elevated);
+    case 'highStage1':
+      return resolveBloodPressureCategoryStyle(
+        BloodPressureCategory.highStage1,
+      );
+    case 'highStage2':
+      return resolveBloodPressureCategoryStyle(
+        BloodPressureCategory.highStage2,
+      );
+    case 'hypertensiveCrisis':
+      return resolveBloodPressureCategoryStyle(
+        BloodPressureCategory.hypertensiveCrisis,
+      );
+    default:
+      return const BloodPressureCategoryStyle(
+        label: 'Нет данных',
+        accent: Color(0xFF7C8EA8),
+        softBackground: Color(0xFFF0F4F8),
+        iconBackground: Color(0xFFE8EEF5),
+        icon: Icons.info_outline_rounded,
+      );
+  }
+}

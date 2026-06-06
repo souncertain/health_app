@@ -6,19 +6,23 @@ using Services.Interfaces;
 using Services.Validation.Infrastructure;
 using ProfileEntity = Domain.Entity.Profile;
 using UserEntity = Domain.Entity.User;
+using BloodPressureEntity = Domain.Entity.BloodPressure;
 
 namespace Services.Services
 {
     public class ProfileService : AbstractService<ProfileEntity, ProfileCreateDto, ProfileDetailsDto>, IProfileService
     {
         private readonly IProfileRepository _profileRepository;
+        private readonly IBloodPressureRepository _bloodPressureRepository;
 
         public ProfileService(
             IProfileRepository repository,
+            IBloodPressureRepository bloodPressureRepository,
             IMapper mapper,
             IRequestValidationService validationService) : base(repository, mapper, validationService)
         {
             _profileRepository = repository;
+            _bloodPressureRepository = bloodPressureRepository;
         }
 
         public async Task<ProfilePageDto> GetCurrentProfilePage(CancellationToken ct)
@@ -46,6 +50,20 @@ namespace Services.Services
         public Task<ProfileStatsDto> GetCurrentProfileStats(CancellationToken ct)
         {
             return _profileRepository.GetCurrentProfileStats(ct);
+        }
+
+        public async Task<ProfileHealthInsightsDto> GetCurrentHealthInsights(CancellationToken ct)
+        {
+            var profile = await _profileRepository.GetCurrentProfile(ct);
+            var readings = (await _bloodPressureRepository.GetLastValues(30)).ToList();
+            var age = CalculateAge(profile?.Birthday);
+
+            return new ProfileHealthInsightsDto
+            {
+                BloodPressure = BuildBloodPressureInsight(age, readings),
+                BodyMass = BuildBodyMassInsight(profile),
+                RiskSignals = BuildRiskSignals(age, profile, readings),
+            };
         }
 
         public async Task<ProfilePageDto> SaveCurrentProfile(ProfilePageUpdateDto dto, CancellationToken ct)
@@ -272,6 +290,382 @@ namespace Services.Services
                 false => $"{label}-",
                 _ => label,
             };
+        }
+
+        private static BloodPressureInsightDto BuildBloodPressureInsight(
+            int? age,
+            IReadOnlyList<BloodPressureEntity> readings)
+        {
+            if (readings.Count == 0)
+            {
+                return new BloodPressureInsightDto
+                {
+                    Summary = "Добавьте несколько измерений давления, чтобы увидеть средние значения и тренд."
+                };
+            }
+
+            var ordered = readings
+                .OrderByDescending(x => x.RecordedAt)
+                .ToList();
+            var now = DateTime.UtcNow;
+            var last30Days = ordered
+                .Where(x => x.RecordedAt >= now.AddDays(-30))
+                .ToList();
+            var last7Days = ordered
+                .Where(x => x.RecordedAt >= now.AddDays(-7))
+                .ToList();
+            var previous7Days = ordered
+                .Where(x => x.RecordedAt < now.AddDays(-7) && x.RecordedAt >= now.AddDays(-14))
+                .ToList();
+            var windowForAverages = last7Days.Count > 0 ? last7Days : ordered;
+            var variabilityWindow = ordered.Take(10).ToList();
+            var latest = ordered[0];
+
+            var trend = ResolveTrend(windowForAverages, previous7Days);
+            var variability = ResolveVariability(variabilityWindow);
+            var normalRangePercent = last30Days.Count == 0
+                ? 0
+                : (int)Math.Round(last30Days.Count(x => x.Category == BloodPressureCategory.Normal) * 100.0 / last30Days.Count);
+            var requiresPediatricAssessment = age.HasValue && age.Value < 13;
+            var latestCategoryKey = requiresPediatricAssessment
+                ? "requiresPediatricAssessment"
+                : MapCategory(latest.Category);
+
+            return new BloodPressureInsightDto
+            {
+                HasReadings = true,
+                ReadingsCount = ordered.Count,
+                MeasuredDaysLast30Days = last30Days
+                    .Select(x => x.RecordedAt.Date)
+                    .Distinct()
+                    .Count(),
+                AverageSystolic = (int)Math.Round(windowForAverages.Average(x => x.Systolic)),
+                AverageDiastolic = (int)Math.Round(windowForAverages.Average(x => x.Diastolic)),
+                AveragePulse = (int)Math.Round(windowForAverages.Average(x => x.Pulse)),
+                NormalRangePercent = requiresPediatricAssessment ? null : normalRangePercent,
+                LatestCategory = latestCategoryKey,
+                Trend = trend,
+                Variability = variability,
+                Summary = BuildBloodPressureSummary(age, latest.Category, trend, variability),
+            };
+        }
+
+        private static BodyMassInsightDto BuildBodyMassInsight(ProfileEntity? profile)
+        {
+            if (profile?.Height is null || profile.Weight is null || profile.Height <= 0 || profile.Weight <= 0)
+            {
+                return new BodyMassInsightDto
+                {
+                    Summary = "Укажите рост и вес в профиле, чтобы приложение рассчитало индекс массы тела."
+                };
+            }
+
+            var heightMeters = profile.Height.Value / 100.0;
+            var bmi = profile.Weight.Value / (heightMeters * heightMeters);
+            var category = ResolveBmiCategory(bmi);
+            var minHealthyWeight = 18.5 * heightMeters * heightMeters;
+            var maxHealthyWeight = 24.9 * heightMeters * heightMeters;
+            double? weightDelta = null;
+
+            if (bmi < 18.5)
+            {
+                weightDelta = Math.Round(minHealthyWeight - profile.Weight.Value, 1);
+            }
+            else if (bmi > 24.9)
+            {
+                weightDelta = Math.Round(maxHealthyWeight - profile.Weight.Value, 1);
+            }
+
+            return new BodyMassInsightDto
+            {
+                HasBodyMassData = true,
+                Bmi = Math.Round(bmi, 1),
+                Category = category,
+                HealthyWeightMinKg = Math.Round(minHealthyWeight, 1),
+                HealthyWeightMaxKg = Math.Round(maxHealthyWeight, 1),
+                WeightDeltaKg = weightDelta,
+                Summary = BuildBodyMassSummary(category, weightDelta),
+            };
+        }
+
+        private static string ResolveTrend(
+            IReadOnlyList<BloodPressureEntity> recentReadings,
+            IReadOnlyList<BloodPressureEntity> previousReadings)
+        {
+            if (recentReadings.Count < 2 || previousReadings.Count < 2)
+            {
+                return "insufficientData";
+            }
+
+            var recentSystolic = recentReadings.Average(x => x.Systolic);
+            var recentDiastolic = recentReadings.Average(x => x.Diastolic);
+            var previousSystolic = previousReadings.Average(x => x.Systolic);
+            var previousDiastolic = previousReadings.Average(x => x.Diastolic);
+
+            if (recentSystolic <= previousSystolic - 5 && recentDiastolic <= previousDiastolic - 3)
+            {
+                return "improving";
+            }
+
+            if (recentSystolic >= previousSystolic + 5 || recentDiastolic >= previousDiastolic + 3)
+            {
+                return "rising";
+            }
+
+            return "stable";
+        }
+
+        private static string ResolveVariability(IReadOnlyList<BloodPressureEntity> readings)
+        {
+            if (readings.Count < 3)
+            {
+                return "insufficientData";
+            }
+
+            var average = readings.Average(x => x.Systolic);
+            var variance = readings.Average(x => Math.Pow(x.Systolic - average, 2));
+            var standardDeviation = Math.Sqrt(variance);
+
+            if (standardDeviation < 8)
+            {
+                return "low";
+            }
+
+            if (standardDeviation < 15)
+            {
+                return "moderate";
+            }
+
+            return "high";
+        }
+
+        private static string MapCategory(BloodPressureCategory category)
+        {
+            return category switch
+            {
+                BloodPressureCategory.Normal => "normal",
+                BloodPressureCategory.Elevated => "elevated",
+                BloodPressureCategory.HighStage1 => "highStage1",
+                BloodPressureCategory.HighStage2 => "highStage2",
+                BloodPressureCategory.HypertensiveCrisis => "hypertensiveCrisis",
+                _ => "noData",
+            };
+        }
+
+        private static string BuildBloodPressureSummary(
+            int? age,
+            BloodPressureCategory category,
+            string trend,
+            string variability)
+        {
+            if (age.HasValue && age.Value < 13)
+            {
+                return "Для детей младше 13 лет корректная оценка давления зависит от возраста, пола и ростового перцентиля. Приложение показывает динамику измерений, но итоговую категорию давления для такого возраста должен подтверждать врач.";
+            }
+
+            var categoryMessage = category switch
+            {
+                BloodPressureCategory.Normal => "Последнее измерение находится в нормальном диапазоне.",
+                BloodPressureCategory.Elevated => "Давление выше оптимального уровня и требует наблюдения.",
+                BloodPressureCategory.HighStage1 => "Показатели соответствуют гипертензии 1 стадии.",
+                BloodPressureCategory.HighStage2 => "Показатели соответствуют гипертензии 2 стадии.",
+                BloodPressureCategory.HypertensiveCrisis => "Показатели находятся в критически высоком диапазоне.",
+                _ => "Пока недостаточно данных для оценки давления."
+            };
+
+            var trendMessage = trend switch
+            {
+                "improving" => "Средние значения улучшаются по сравнению с предыдущей неделей.",
+                "rising" => "Средние значения растут и требуют дополнительного контроля.",
+                "stable" => "Динамика за последние недели остаётся стабильной.",
+                _ => "Для оценки тренда нужно больше регулярных измерений."
+            };
+
+            var variabilityMessage = variability switch
+            {
+                "low" => "Колебания давления небольшие.",
+                "moderate" => "Колебания давления умеренные.",
+                "high" => "Колебания давления выражены сильнее обычного.",
+                _ => string.Empty
+            };
+
+            return string.Join(" ",
+                new[] { categoryMessage, trendMessage, variabilityMessage }
+                    .Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        private static string ResolveBmiCategory(double bmi)
+        {
+            if (bmi < 18.5)
+            {
+                return "underweight";
+            }
+
+            if (bmi < 25)
+            {
+                return "normal";
+            }
+
+            if (bmi < 30)
+            {
+                return "overweight";
+            }
+
+            return "obesity";
+        }
+
+        private static string BuildBodyMassSummary(string category, double? weightDeltaKg)
+        {
+            return category switch
+            {
+                "underweight" => weightDeltaKg.HasValue
+                    ? $"Масса тела ниже рекомендуемого диапазона. До нижней границы комфортного диапазона не хватает около {weightDeltaKg.Value:F1} кг."
+                    : "Масса тела ниже рекомендуемого диапазона.",
+                "normal" => "Масса тела находится в рекомендуемом диапазоне по индексу массы тела.",
+                "overweight" => weightDeltaKg.HasValue
+                    ? $"Есть избыток массы тела. Для возврата к верхней границе рекомендуемого диапазона нужно снизить примерно {Math.Abs(weightDeltaKg.Value):F1} кг."
+                    : "Есть избыток массы тела.",
+                "obesity" => weightDeltaKg.HasValue
+                    ? $"Индекс массы тела соответствует ожирению. Для возврата к верхней границе рекомендуемого диапазона нужно снизить примерно {Math.Abs(weightDeltaKg.Value):F1} кг."
+                    : "Индекс массы тела соответствует ожирению.",
+                _ => "Укажите рост и вес в профиле, чтобы приложение рассчитало индекс массы тела."
+            };
+        }
+
+        private static IReadOnlyList<HealthRiskSignalDto> BuildRiskSignals(
+            int? age,
+            ProfileEntity? profile,
+            IReadOnlyList<BloodPressureEntity> readings)
+        {
+            var signals = new List<HealthRiskSignalDto>();
+            var latestReading = readings
+                .OrderByDescending(x => x.RecordedAt)
+                .FirstOrDefault();
+            var bmi = TryCalculateBmi(profile);
+            var hasAdultBloodPressureAssessment = !age.HasValue || age.Value >= 13;
+            var averagePulse = readings.Count == 0
+                ? (double?)null
+                : readings
+                    .OrderByDescending(x => x.RecordedAt)
+                    .Take(7)
+                    .Average(x => x.Pulse);
+
+            if (latestReading is not null && hasAdultBloodPressureAssessment)
+            {
+                switch (latestReading.Category)
+                {
+                    case BloodPressureCategory.HighStage2:
+                    case BloodPressureCategory.HypertensiveCrisis:
+                        signals.Add(new HealthRiskSignalDto
+                        {
+                            Key = "bloodPressureHighRisk",
+                            Level = "high",
+                            Title = "Высокий риск осложнений из-за давления",
+                            Description = "Последние измерения соответствуют выраженно повышенному давлению. Это увеличивает риск инсульта, болезней сердца и поражения почек."
+                        });
+                        break;
+                    case BloodPressureCategory.HighStage1:
+                    case BloodPressureCategory.Elevated:
+                        signals.Add(new HealthRiskSignalDto
+                        {
+                            Key = "bloodPressureAttention",
+                            Level = "medium",
+                            Title = "Давление требует наблюдения",
+                            Description = "Показатели давления выше оптимального диапазона. При повторяющихся значениях стоит продолжать контроль и обсудить ситуацию с врачом."
+                        });
+                        break;
+                }
+            }
+
+            if (averagePulse.HasValue)
+            {
+                if (averagePulse.Value > 100)
+                {
+                    signals.Add(new HealthRiskSignalDto
+                    {
+                        Key = "pulseHigh",
+                        Level = "medium",
+                        Title = "Пульс выше нормы покоя",
+                        Description = "Средний пульс по недавним измерениям превышает 100 ударов в минуту. Это повод внимательнее наблюдать за самочувствием и повторными измерениями."
+                    });
+                }
+                else if (averagePulse.Value < 60)
+                {
+                    signals.Add(new HealthRiskSignalDto
+                    {
+                        Key = "pulseLow",
+                        Level = "low",
+                        Title = "Пульс ниже типичного диапазона",
+                        Description = "Средний пульс по недавним измерениям ниже 60 ударов в минуту. Для части людей это может быть вариантом нормы, но при симптомах стоит оценить показатель отдельно."
+                    });
+                }
+            }
+
+            if (bmi.HasValue)
+            {
+                if (bmi.Value >= 30)
+                {
+                    signals.Add(new HealthRiskSignalDto
+                    {
+                        Key = "obesityRisk",
+                        Level = "high",
+                        Title = "Выраженный кардиометаболический риск по массе тела",
+                        Description = "Индекс массы тела соответствует ожирению. Это связано с более высоким риском гипертонии, диабета 2 типа и сердечно-сосудистых заболеваний."
+                    });
+                }
+                else if (bmi.Value >= 25)
+                {
+                    signals.Add(new HealthRiskSignalDto
+                    {
+                        Key = "overweightRisk",
+                        Level = "medium",
+                        Title = "Повышенный риск из-за избыточной массы",
+                        Description = "Избыточная масса тела повышает вероятность роста давления и метаболических нарушений. Полезно наблюдать за весом в динамике."
+                    });
+                }
+            }
+
+            if (age.HasValue && age.Value >= 45 && bmi.HasValue && bmi.Value >= 25)
+            {
+                signals.Add(new HealthRiskSignalDto
+                {
+                    Key = "diabetesRisk",
+                    Level = bmi.Value >= 30 ? "high" : "medium",
+                    Title = "Сигнал риска предиабета и диабета 2 типа",
+                    Description = "Возраст старше 45 лет в сочетании с избыточной массой тела считается важным фактором риска нарушений углеводного обмена."
+                });
+            }
+
+            if (age.HasValue && age.Value >= 45 &&
+                bmi.HasValue && bmi.Value >= 25 &&
+                latestReading is not null &&
+                hasAdultBloodPressureAssessment &&
+                latestReading.Category is BloodPressureCategory.Elevated or BloodPressureCategory.HighStage1 or BloodPressureCategory.HighStage2 or BloodPressureCategory.HypertensiveCrisis)
+            {
+                signals.Add(new HealthRiskSignalDto
+                {
+                    Key = "cardiometabolicRisk",
+                    Level = bmi.Value >= 30 || latestReading.Category >= BloodPressureCategory.HighStage1 ? "high" : "medium",
+                    Title = "Кардиометаболический риск повышен",
+                    Description = "Сочетание возраста, повышенного давления и избыточной массы тела связано с более высоким риском сердечно-сосудистых и обменных нарушений."
+                });
+            }
+
+            return signals
+                .GroupBy(x => x.Key)
+                .Select(x => x.First())
+                .ToList();
+        }
+
+        private static double? TryCalculateBmi(ProfileEntity? profile)
+        {
+            if (profile?.Height is null || profile.Weight is null || profile.Height <= 0 || profile.Weight <= 0)
+            {
+                return null;
+            }
+
+            var heightMeters = profile.Height.Value / 100.0;
+            return profile.Weight.Value / (heightMeters * heightMeters);
         }
     }
 }

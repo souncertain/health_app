@@ -78,6 +78,7 @@ class DashboardController extends ChangeNotifier {
     required int systolic,
     required int diastolic,
     required int pulse,
+    required DateTime recordedAt,
   }) async {
     _isSaving = true;
     _errorMessage = null;
@@ -89,6 +90,7 @@ class DashboardController extends ChangeNotifier {
           systolic: systolic,
           diastolic: diastolic,
           pulse: pulse,
+          recordedAt: recordedAt,
           updatedAt: now,
           syncState: existingReading.syncState,
         ) ??
@@ -97,7 +99,7 @@ class DashboardController extends ChangeNotifier {
           systolic: systolic,
           diastolic: diastolic,
           pulse: pulse,
-          recordedAt: now,
+          recordedAt: recordedAt,
           createdAt: now,
           updatedAt: now,
         );

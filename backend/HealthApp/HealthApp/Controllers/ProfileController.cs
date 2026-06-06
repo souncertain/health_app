@@ -30,6 +30,12 @@ namespace HealthApp.Controllers
             return await _profileService.GetCurrentProfileStats(ct);
         }
 
+        [HttpGet("me/insights")]
+        public async Task<ProfileHealthInsightsDto> GetCurrentHealthInsights(CancellationToken ct)
+        {
+            return await _profileService.GetCurrentHealthInsights(ct);
+        }
+
         [HttpPut("me")]
         public async Task<ProfilePageDto> SaveCurrentProfile([FromBody] ProfilePageUpdateDto dto, CancellationToken ct)
         {

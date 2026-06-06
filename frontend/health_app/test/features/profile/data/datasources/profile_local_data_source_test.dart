@@ -20,7 +20,9 @@ void main() {
   });
 
   test('saveProfile persists and restores profile', () async {
-    final profile = UserProfileModel.fromEntity(sampleUserProfile(fullName: 'Test User'));
+    final profile = UserProfileModel.fromEntity(
+      sampleUserProfile(fullName: 'Test User'),
+    );
 
     await dataSource.saveProfile(profile);
 
@@ -29,21 +31,43 @@ void main() {
     expect(restored?.notificationsEnabled, isTrue);
   });
 
-  test('getProfile prefers standalone notifications flag when it differs', () async {
+  test('watchProfileChanges emits updates after save and clear', () async {
     final profile = UserProfileModel.fromEntity(
-      sampleUserProfile(notificationsEnabled: false),
+      sampleUserProfile(fullName: 'Updated User'),
     );
-    final payload = jsonEncode(profile.toJson());
-    SharedPreferences.setMockInitialValues({
-      ProfileLocalDataSource.profileStorageKey: payload,
-      ProfileLocalDataSource.notificationsEnabledStorageKey: true,
-    });
-    dataSource = ProfileLocalDataSource();
+    final events = <UserProfileModel?>[];
+    final subscription = dataSource.watchProfileChanges().listen(events.add);
 
-    final restored = await dataSource.getProfile();
+    await dataSource.saveProfile(profile);
+    await Future<void>.delayed(Duration.zero);
+    await dataSource.clear();
+    await Future<void>.delayed(Duration.zero);
 
-    expect(restored?.notificationsEnabled, isTrue);
+    await subscription.cancel();
+
+    expect(events, hasLength(2));
+    expect(events.first?.fullName, 'Updated User');
+    expect(events.last, isNull);
   });
+
+  test(
+    'getProfile prefers standalone notifications flag when it differs',
+    () async {
+      final profile = UserProfileModel.fromEntity(
+        sampleUserProfile(notificationsEnabled: false),
+      );
+      final payload = jsonEncode(profile.toJson());
+      SharedPreferences.setMockInitialValues({
+        ProfileLocalDataSource.profileStorageKey: payload,
+        ProfileLocalDataSource.notificationsEnabledStorageKey: true,
+      });
+      dataSource = ProfileLocalDataSource();
+
+      final restored = await dataSource.getProfile();
+
+      expect(restored?.notificationsEnabled, isTrue);
+    },
+  );
 
   test('clear removes profile and notifications flag', () async {
     await dataSource.saveProfile(

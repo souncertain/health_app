@@ -77,6 +77,7 @@ class AllReadingsPage extends StatelessWidget {
           systolic: value.systolic,
           diastolic: value.diastolic,
           pulse: value.pulse,
+          recordedAt: value.recordedAt,
         );
       },
       onDelete: () => controller.deleteReading(reading),

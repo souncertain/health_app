@@ -7,6 +7,7 @@ namespace Services.Interfaces
     {
         Task<ProfilePageDto> GetCurrentProfilePage(CancellationToken ct);
         Task<ProfileStatsDto> GetCurrentProfileStats(CancellationToken ct);
+        Task<ProfileHealthInsightsDto> GetCurrentHealthInsights(CancellationToken ct);
         Task<ProfilePageDto> SaveCurrentProfile(ProfilePageUpdateDto dto, CancellationToken ct);
     }
 }

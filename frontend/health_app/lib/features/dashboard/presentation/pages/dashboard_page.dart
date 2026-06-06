@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import '../../../../core/layout/app_layout_constants.dart';
 import '../../../profile/data/datasources/profile_local_data_source.dart';
 import '../../data/datasources/blood_pressure_local_data_source.dart';
+import '../../data/datasources/dashboard_insights_remote_data_source.dart';
 import '../../data/repositories/local_blood_pressure_repository.dart';
 import '../../domain/entities/blood_pressure_reading.dart';
+import '../../domain/entities/dashboard_health_insights.dart';
 import '../../domain/repositories/blood_pressure_repository.dart';
 import '../../domain/usecases/delete_blood_pressure_reading.dart';
 import '../../domain/usecases/get_blood_pressure_readings.dart';
@@ -15,7 +17,9 @@ import '../../domain/usecases/save_blood_pressure_reading.dart';
 import '../controllers/dashboard_controller.dart';
 import '../utils/blood_pressure_category_style.dart';
 import '../utils/dashboard_date_formatter.dart';
+import '../utils/dashboard_insights_calculator.dart';
 import '../widgets/blood_pressure_reading_sheet.dart';
+import '../widgets/dashboard_health_insights_card.dart';
 import '../widgets/dashboard_history_card.dart';
 import '../widgets/dashboard_reading_card.dart';
 import 'all_readings_page.dart';
@@ -38,8 +42,14 @@ class DashboardPageState extends State<DashboardPage> {
   late final DashboardController _controller;
   late final ProfileLocalDataSource _profileLocalDataSource =
       widget.profileLocalDataSource ?? ProfileLocalDataSource();
+  late final DashboardInsightsRemoteDataSource _insightsRemoteDataSource =
+      DashboardInsightsRemoteDataSource();
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  StreamSubscription<Object?>? _profileChangesSubscription;
   DashboardHistoryRange _selectedHistoryRange = DashboardHistoryRange.sevenDays;
+  DashboardHealthInsights _healthInsights = DashboardHealthInsights.empty();
+  bool _isLoadingInsights = false;
+  String _insightsSignature = '';
   String _displayName = 'Пользователь';
 
   @override
@@ -54,7 +64,15 @@ class DashboardPageState extends State<DashboardPage> {
       deleteReading: DeleteBloodPressureReadingUseCase(repository),
     );
     _controller.initialize();
+    _controller.addListener(_handleControllerChanged);
     unawaited(_loadProfileDisplayName());
+    unawaited(_loadHealthInsights());
+    _profileChangesSubscription = _profileLocalDataSource
+        .watchProfileChanges()
+        .listen((_) {
+          unawaited(_loadProfileDisplayName());
+          unawaited(_loadHealthInsights(forceRemote: true));
+        });
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
       results,
     ) {
@@ -63,6 +81,7 @@ class DashboardPageState extends State<DashboardPage> {
       }
 
       unawaited(_controller.refresh());
+      unawaited(_loadHealthInsights(forceRemote: true));
     });
   }
 
@@ -95,9 +114,70 @@ class DashboardPageState extends State<DashboardPage> {
     return parts.isEmpty ? 'Пользователь' : parts.first;
   }
 
+  void _handleControllerChanged() {
+    if (_controller.isLoading) {
+      return;
+    }
+
+    final latestUpdatedAt =
+        _controller.latestReading?.updatedAt.millisecondsSinceEpoch ?? 0;
+    final signature =
+        '${_controller.allReadings.length}:$latestUpdatedAt:${_controller.averageSystolic}:${_controller.averageDiastolic}';
+    if (_insightsSignature == signature) {
+      return;
+    }
+
+    _insightsSignature = signature;
+    unawaited(_loadHealthInsights());
+  }
+
+  Future<void> _loadHealthInsights({bool forceRemote = false}) async {
+    if (_isLoadingInsights) {
+      return;
+    }
+
+    _isLoadingInsights = true;
+    DashboardHealthInsights? insights;
+    try {
+      if (forceRemote) {
+        try {
+          insights = await _insightsRemoteDataSource.getInsights();
+        } catch (_) {
+          final profile = await _profileLocalDataSource.getProfile();
+          insights = DashboardInsightsCalculator.fromLocalData(
+            profile: profile,
+            readings: _controller.allReadings,
+          );
+        }
+      } else {
+        try {
+          insights = await _insightsRemoteDataSource.getInsights();
+        } catch (_) {
+          final profile = await _profileLocalDataSource.getProfile();
+          insights = DashboardInsightsCalculator.fromLocalData(
+            profile: profile,
+            readings: _controller.allReadings,
+          );
+        }
+      }
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _healthInsights = insights ?? DashboardHealthInsights.empty();
+      });
+    } finally {
+      _isLoadingInsights = false;
+    }
+  }
+
   @override
   void dispose() {
     _connectivitySubscription?.cancel();
+    _profileChangesSubscription?.cancel();
+    _controller.removeListener(_handleControllerChanged);
     _controller.dispose();
     super.dispose();
   }
@@ -110,6 +190,7 @@ class DashboardPageState extends State<DashboardPage> {
           systolic: value.systolic,
           diastolic: value.diastolic,
           pulse: value.pulse,
+          recordedAt: value.recordedAt,
         );
       },
     );
@@ -125,6 +206,7 @@ class DashboardPageState extends State<DashboardPage> {
           systolic: value.systolic,
           diastolic: value.diastolic,
           pulse: value.pulse,
+          recordedAt: value.recordedAt,
         );
       },
       onDelete: () => _controller.deleteReading(reading),
@@ -232,6 +314,43 @@ class DashboardPageState extends State<DashboardPage> {
                             ],
                           ),
                         ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            18,
+                            horizontalPadding,
+                            0,
+                          ),
+                          child: DashboardHealthInsightsCard(
+                            insight: _healthInsights.bloodPressure,
+                            compact: isCompact,
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            18,
+                            horizontalPadding,
+                            0,
+                          ),
+                          child: DashboardBodyMassInsightCard(
+                            insight: _healthInsights.bodyMass,
+                            compact: isCompact,
+                          ),
+                        ),
+                        if (_healthInsights.riskSignals.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(
+                              horizontalPadding,
+                              18,
+                              horizontalPadding,
+                              0,
+                            ),
+                            child: DashboardRiskSignalsCard(
+                              signals: _healthInsights.riskSignals,
+                              compact: isCompact,
+                            ),
+                          ),
                         Padding(
                           padding: EdgeInsets.fromLTRB(
                             horizontalPadding,

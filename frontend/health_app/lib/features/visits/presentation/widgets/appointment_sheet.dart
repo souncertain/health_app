@@ -9,17 +9,12 @@ Future<void> showAppointmentSheet({
   required BuildContext context,
   required Future<void> Function(AppointmentFormValue value) onSubmit,
   MedicalVisit? initialVisit,
-  AppointmentFormDraft? initialDraft,
 }) {
   return showAppModalSheet<void>(
     context: context,
     heightFactor: 0.94,
     builder: (_) =>
-        AppointmentSheet(
-          initialVisit: initialVisit,
-          initialDraft: initialDraft,
-          onSubmit: onSubmit,
-        ),
+        AppointmentSheet(initialVisit: initialVisit, onSubmit: onSubmit),
   );
 }
 
@@ -41,35 +36,15 @@ class AppointmentFormValue {
   final MedicalVisitType visitType;
 }
 
-class AppointmentFormDraft {
-  const AppointmentFormDraft({
-    this.doctorName,
-    this.specialty,
-    this.appointmentDate,
-    this.timeInMinutes,
-    this.location,
-    this.visitType = MedicalVisitType.oneTime,
-  });
-
-  final String? doctorName;
-  final String? specialty;
-  final DateTime? appointmentDate;
-  final int? timeInMinutes;
-  final String? location;
-  final MedicalVisitType visitType;
-}
-
 class AppointmentSheet extends StatefulWidget {
   const AppointmentSheet({
     super.key,
     required this.onSubmit,
     this.initialVisit,
-    this.initialDraft,
   });
 
   final Future<void> Function(AppointmentFormValue value) onSubmit;
   final MedicalVisit? initialVisit;
-  final AppointmentFormDraft? initialDraft;
 
   @override
   State<AppointmentSheet> createState() => _AppointmentSheetState();
@@ -78,18 +53,16 @@ class AppointmentSheet extends StatefulWidget {
 class _AppointmentSheetState extends State<AppointmentSheet> {
   final _formKey = GlobalKey<FormState>();
   late final _doctorController = TextEditingController(
-    text: widget.initialVisit?.doctorName ?? widget.initialDraft?.doctorName ?? '',
+    text: widget.initialVisit?.doctorName ?? '',
   );
   late final _specialtyController = TextEditingController(
-    text: widget.initialVisit?.specialty ?? widget.initialDraft?.specialty ?? '',
+    text: widget.initialVisit?.specialty ?? '',
   );
   late final _locationController = TextEditingController(
-    text: widget.initialVisit?.location ?? widget.initialDraft?.location ?? '',
+    text: widget.initialVisit?.location ?? '',
   );
   late DateTime _selectedDate = MedicalVisit.normalizeDate(
-    widget.initialVisit?.appointmentDate ??
-        widget.initialDraft?.appointmentDate ??
-        DateTime.now(),
+    widget.initialVisit?.appointmentDate ?? DateTime.now(),
   );
   int? _selectedTimeInMinutes;
   late MedicalVisitType _visitType;
@@ -100,12 +73,8 @@ class _AppointmentSheetState extends State<AppointmentSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedTimeInMinutes =
-        widget.initialVisit?.timeInMinutes ?? widget.initialDraft?.timeInMinutes;
-    _visitType =
-        widget.initialVisit?.visitType ??
-        widget.initialDraft?.visitType ??
-        MedicalVisitType.oneTime;
+    _selectedTimeInMinutes = widget.initialVisit?.timeInMinutes;
+    _visitType = widget.initialVisit?.visitType ?? MedicalVisitType.oneTime;
   }
 
   @override
